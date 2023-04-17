@@ -8,15 +8,22 @@ use std::process::{Command, Stdio};
 
 #[derive(PartialEq)]
 pub enum Redirect {
-    RedirectIn,
-    RedirectOut,
-    RedirectOutAppend,
+    In,
+    Out,
+    OutAppend,
+}
+
+#[derive(PartialEq)]
+pub enum Chain {
+    Multiple,
+    And,
+    Or,
 }
 
 pub enum Special {
-    SpecialTrue,
-    SpecialFalse,
-    SpecialExit,
+    True,
+    False,
+    Exit,
 }
 
 pub trait Execute {
@@ -145,9 +152,9 @@ impl RedirectCommand<'_> {
 impl Execute for RedirectCommand<'_> {
     fn execute(&self, stdin: i32, out: bool) -> (i32, bool) {
         let file = match self.redirect {
-            Redirect::RedirectIn => File::open(self.path),
-            Redirect::RedirectOut => OpenOptions::new().write(true).create(true).open(self.path),
-            Redirect::RedirectOutAppend => OpenOptions::new()
+            Redirect::In => File::open(self.path),
+            Redirect::Out => OpenOptions::new().write(true).create(true).open(self.path),
+            Redirect::OutAppend => OpenOptions::new()
                 .write(true)
                 .create(true)
                 .append(true)
@@ -156,13 +163,13 @@ impl Execute for RedirectCommand<'_> {
 
         match file {
             Ok(mut file) => {
-                let stdin = if self.redirect == Redirect::RedirectIn {
+                let stdin = if self.redirect == Redirect::In {
                     file.as_raw_fd()
                 } else {
                     stdin
                 };
 
-                let out = if self.redirect == Redirect::RedirectIn {
+                let out = if self.redirect == Redirect::In {
                     out
                 } else {
                     false
@@ -170,7 +177,7 @@ impl Execute for RedirectCommand<'_> {
 
                 let (stdout, status) = self.command.execute(stdin, out);
 
-                if self.redirect == Redirect::RedirectIn || stdout == -1 {
+                if self.redirect == Redirect::In || stdout == -1 {
                     return (stdout, status);
                 }
 
@@ -190,35 +197,48 @@ impl Execute for RedirectCommand<'_> {
     }
 }
 
-pub struct AndOr<'a> {
+pub struct ChainCommand<'a> {
     command1: Box<dyn Execute + 'a>,
     command2: Box<dyn Execute + 'a>,
-    and: bool,
+    chain: Chain,
 }
 
-impl AndOr<'_> {
+impl ChainCommand<'_> {
     pub fn new<'a>(
         command1: Box<dyn Execute + 'a>,
         command2: Box<dyn Execute + 'a>,
-        and: bool,
-    ) -> AndOr<'a> {
-        AndOr {
+        chain: Chain,
+    ) -> ChainCommand<'a> {
+        ChainCommand {
             command1,
             command2,
-            and,
+            chain,
         }
     }
 }
 
-impl Execute for AndOr<'_> {
-    fn execute(&self, stdin: i32, out: bool) -> (i32, bool) {
-        let (stdout, status) = self.command1.execute(stdin, out);
+impl Execute for ChainCommand<'_> {
+    fn execute(&self, _: i32, out: bool) -> (i32, bool) {
+        let (stdout1, status1) = self.command1.execute(-1, out);
+        let (mut stdout2, mut status2) = (1, true);
 
-        if (self.and && status) || (!self.and && !status) {
-            return self.command2.execute(-1, true);
-        }
+        match self.chain {
+            Chain::And => {
+                if status1 {
+                    (stdout2, status2) = self.command2.execute(-1, out);
+                }
+            }
+            Chain::Or => {
+                if !status1 {
+                    (stdout2, status2) = self.command2.execute(-1, out);
+                }
+            }
+            Chain::Multiple => {
+                (stdout2, status2) = self.command2.execute(-1, out);
+            }
+        };
 
-        (stdout, status)
+        return (1, status1 && status2);
     }
 }
 
@@ -235,9 +255,9 @@ impl SpecialCommand {
 impl Execute for SpecialCommand {
     fn execute(&self, _: i32, _: bool) -> (i32, bool) {
         match self.special {
-            Special::SpecialTrue => (-1, true),
-            Special::SpecialFalse => (-1, false),
-            Special::SpecialExit => exit(1),
+            Special::True => (-1, true),
+            Special::False => (-1, false),
+            Special::Exit => exit(1),
         }
     }
 }

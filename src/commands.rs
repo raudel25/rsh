@@ -3,6 +3,7 @@ use std::fs::{File, OpenOptions};
 use std::io::copy;
 use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
 use std::path::Path;
+use std::process::exit;
 use std::process::{Command, Stdio};
 
 #[derive(PartialEq)]
@@ -10,6 +11,12 @@ pub enum Redirect {
     RedirectIn,
     RedirectOut,
     RedirectOutAppend,
+}
+
+pub enum Special {
+    SpecialTrue,
+    SpecialFalse,
+    SpecialExit,
 }
 
 pub trait Execute {
@@ -215,10 +222,22 @@ impl Execute for AndOr<'_> {
     }
 }
 
-pub struct False {}
+pub struct SpecialCommand {
+    special: Special,
+}
 
-impl Execute for False {
+impl SpecialCommand {
+    pub fn new(special: Special) -> SpecialCommand {
+        SpecialCommand { special }
+    }
+}
+
+impl Execute for SpecialCommand {
     fn execute(&self, _: i32, _: bool) -> (i32, bool) {
-        (-1, false)
+        match self.special {
+            Special::SpecialTrue => (-1, true),
+            Special::SpecialFalse => (-1, false),
+            Special::SpecialExit => exit(1),
+        }
     }
 }

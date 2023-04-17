@@ -12,7 +12,7 @@ pub enum Redirect {
     RedirectOutAppend,
 }
 pub trait Execute {
-    fn execute(&self, stdin: Stdio, out: bool) -> i32;
+    fn execute(&self, stdin: i32, out: bool) -> i32;
 }
 
 pub struct CommandSystem<'a> {
@@ -27,7 +27,12 @@ impl CommandSystem<'_> {
 }
 
 impl Execute for CommandSystem<'_> {
-    fn execute(&self, stdin: Stdio, out: bool) -> i32 {
+    fn execute(&self, stdin: i32, out: bool) -> i32 {
+        let stdin = if stdin == -1 {
+            Stdio::inherit()
+        } else {
+            unsafe { Stdio::from_raw_fd(stdin) }
+        };
         let stdout = if out {
             Stdio::inherit()
         } else {
@@ -70,7 +75,7 @@ impl Cd<'_> {
 }
 
 impl Execute for Cd<'_> {
-    fn execute(&self, _: Stdio, _: bool) -> i32 {
+    fn execute(&self, _: i32, _: bool) -> i32 {
         let new_dir = self.args[1];
 
         let root = Path::new(new_dir);
@@ -95,14 +100,9 @@ impl Pipe<'_> {
 }
 
 impl Execute for Pipe<'_> {
-    fn execute(&self, stdin: Stdio, out: bool) -> i32 {
-        let stdout = self.command1.execute(stdin, false);
-        let stdin = if stdout == -1 {
-            Stdio::inherit()
-        } else {
-            unsafe { Stdio::from_raw_fd(stdout) }
-        };
-        self.command2.execute(stdin, out)
+    fn execute(&self, stdin: i32, out: bool) -> i32 {
+        self.command2
+            .execute(self.command1.execute(stdin, false), out)
     }
 }
 
@@ -127,19 +127,21 @@ impl RedirectCommand<'_> {
 }
 
 impl Execute for RedirectCommand<'_> {
-    fn execute(&self, stdin: Stdio, out: bool) -> i32 {
+    fn execute(&self, stdin: i32, out: bool) -> i32 {
         let file = match self.redirect {
             Redirect::RedirectIn => File::open(self.path),
             Redirect::RedirectOut => OpenOptions::new().write(true).create(true).open(self.path),
-            Redirect::RedirectOutAppend => {
-                OpenOptions::new().write(true).create(true).append(true).open(self.path)
-            }
+            Redirect::RedirectOutAppend => OpenOptions::new()
+                .write(true)
+                .create(true)
+                .append(true)
+                .open(self.path),
         };
 
         match file {
             Ok(mut file) => {
                 let stdin = if self.redirect == Redirect::RedirectIn {
-                    unsafe { Stdio::from_raw_fd(file.as_raw_fd()) }
+                    file.as_raw_fd()
                 } else {
                     stdin
                 };
@@ -176,7 +178,7 @@ impl Execute for RedirectCommand<'_> {
 pub struct False {}
 
 impl Execute for False {
-    fn execute(&self, _: Stdio, _: bool) -> i32 {
+    fn execute(&self, _: i32, _: bool) -> i32 {
         -1
     }
 }

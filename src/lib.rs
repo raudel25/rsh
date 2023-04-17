@@ -1,12 +1,13 @@
+use std::process::exit;
+
 use commands::*;
-use std::process::Stdio;
 
 mod commands;
 
 pub fn execute(line: &str) {
     let args: Vec<&str> = line.trim().split_whitespace().collect();
 
-    parser(&args).execute(Stdio::inherit(), true);
+    parser(&args).execute(-1, true);
 }
 
 fn priority_command(arg: &str) -> u16 {
@@ -60,6 +61,7 @@ fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
         ">" => redirect(args, ind, Redirect::RedirectOut),
         ">>" => redirect(args, ind, Redirect::RedirectOutAppend),
         "cd" => Box::new(Cd::new(args)),
+        "exit" => exit(1),
         _ => Box::new(CommandSystem::new(args[0], &args[1..])),
     }
 }

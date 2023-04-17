@@ -16,9 +16,34 @@ fn priority_command(arg: &str) -> u16 {
         "|" => 3,
         ">" => 4,
         ">>" => 4,
-
+        "&&" => 5,
+        "||" => 5,
         _ => 0,
     }
+}
+
+fn and_or<'a>(args: &'a [&str], ind: usize, and: bool) -> Box<dyn Execute + 'a> {
+    if ind == 0 || ind == args.len() - 1 {
+        eprintln!("Incorrect Chain");
+        return Box::new(False {});
+    }
+
+    let c1 = parser(&args[0..ind]);
+    let c2 = parser(&args[ind + 1..]);
+
+    Box::new(AndOr::new(c1, c2, and))
+}
+
+fn pipes<'a>(args: &'a [&str], ind: usize) -> Box<dyn Execute + 'a> {
+    if ind == 0 || ind == args.len() - 1 {
+        eprintln!("Incorrect Pipe");
+        return Box::new(False {});
+    }
+
+    let c1 = parser(&args[0..ind]);
+    let c2 = parser(&args[ind + 1..]);
+
+    Box::new(Pipe::new(c1, c2))
 }
 
 fn redirect<'a>(args: &'a [&str], ind: usize, redirect_command: Redirect) -> Box<dyn Execute + 'a> {
@@ -47,19 +72,11 @@ fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
 
     match args[ind] {
         "<" => redirect(args, ind, Redirect::RedirectIn),
-        "|" => {
-            if ind == 0 || ind == args.len() - 1 {
-                eprintln!("Incorrect Pipe");
-                return Box::new(False {});
-            }
-
-            let c1 = parser(&args[0..ind]);
-            let c2 = parser(&args[ind + 1..]);
-
-            Box::new(Pipe::new(c1, c2))
-        }
+        "|" => pipes(args, ind),
         ">" => redirect(args, ind, Redirect::RedirectOut),
         ">>" => redirect(args, ind, Redirect::RedirectOutAppend),
+        "&&" => and_or(args, ind, true),
+        "||" => and_or(args, ind, false),
         "cd" => Box::new(Cd::new(args)),
         "exit" => exit(1),
         _ => Box::new(CommandSystem::new(args[0], &args[1..])),

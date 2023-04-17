@@ -11,8 +11,9 @@ pub enum Redirect {
     RedirectOut,
     RedirectOutAppend,
 }
+
 pub trait Execute {
-    fn execute(&self, stdin: i32, out: bool) -> i32;
+    fn execute(&self, stdin: i32, out: bool) -> (i32, bool);
 }
 
 pub struct CommandSystem<'a> {
@@ -27,7 +28,7 @@ impl CommandSystem<'_> {
 }
 
 impl Execute for CommandSystem<'_> {
-    fn execute(&self, stdin: i32, out: bool) -> i32 {
+    fn execute(&self, stdin: i32, out: bool) -> (i32, bool) {
         let stdin = if stdin == -1 {
             Stdio::inherit()
         } else {
@@ -48,19 +49,23 @@ impl Execute for CommandSystem<'_> {
         match command {
             Ok(mut command) => {
                 match command.wait() {
-                    Ok(_) => {}
+                    Ok(status) => {
+                        if !out {
+                            return (
+                                command.stdout.take().unwrap().into_raw_fd(),
+                                status.success(),
+                            );
+                        }
+
+                        return (-1, status.success());
+                    }
                     Err(e) => eprintln!("{}", e),
                 };
-
-                if !out {
-                    return command.stdout.take().unwrap().into_raw_fd();
-                }
-                return -1;
             }
             Err(e) => eprintln!("{}", e),
         };
 
-        -1
+        (-1, false)
     }
 }
 
@@ -75,16 +80,18 @@ impl Cd<'_> {
 }
 
 impl Execute for Cd<'_> {
-    fn execute(&self, _: i32, _: bool) -> i32 {
+    fn execute(&self, _: i32, _: bool) -> (i32, bool) {
         let new_dir = self.args[1];
 
         let root = Path::new(new_dir);
 
         if let Err(e) = env::set_current_dir(&root) {
             eprintln!("{}", e);
+
+            return (-1, false);
         }
 
-        -1
+        (-1, true)
     }
 }
 
@@ -100,9 +107,11 @@ impl Pipe<'_> {
 }
 
 impl Execute for Pipe<'_> {
-    fn execute(&self, stdin: i32, out: bool) -> i32 {
-        self.command2
-            .execute(self.command1.execute(stdin, false), out)
+    fn execute(&self, stdin: i32, out: bool) -> (i32, bool) {
+        let (stdout, status1) = self.command1.execute(stdin, false);
+        let (stdout, status2) = self.command2.execute(stdout, out);
+
+        (stdout, status1 && status2)
     }
 }
 
@@ -127,7 +136,7 @@ impl RedirectCommand<'_> {
 }
 
 impl Execute for RedirectCommand<'_> {
-    fn execute(&self, stdin: i32, out: bool) -> i32 {
+    fn execute(&self, stdin: i32, out: bool) -> (i32, bool) {
         let file = match self.redirect {
             Redirect::RedirectIn => File::open(self.path),
             Redirect::RedirectOut => OpenOptions::new().write(true).create(true).open(self.path),
@@ -152,33 +161,64 @@ impl Execute for RedirectCommand<'_> {
                     false
                 };
 
-                let stdout = self.command.execute(stdin, out);
+                let (stdout, status) = self.command.execute(stdin, out);
 
                 if self.redirect == Redirect::RedirectIn || stdout == -1 {
-                    return stdout;
+                    return (stdout, status);
                 }
 
                 let mut out_file = unsafe { File::from_raw_fd(stdout) };
 
                 match copy(&mut out_file, &mut file) {
-                    Ok(_) => {}
+                    Ok(_) => {
+                        return (-1, status);
+                    }
                     Err(e) => eprintln!("{}", e),
                 };
-
-                -1
             }
-            Err(e) => {
-                eprintln!("{}", e);
-                -1
-            }
+            Err(e) => eprintln!("{}", e),
         }
+
+        (-1, false)
+    }
+}
+
+pub struct AndOr<'a> {
+    command1: Box<dyn Execute + 'a>,
+    command2: Box<dyn Execute + 'a>,
+    and: bool,
+}
+
+impl AndOr<'_> {
+    pub fn new<'a>(
+        command1: Box<dyn Execute + 'a>,
+        command2: Box<dyn Execute + 'a>,
+        and: bool,
+    ) -> AndOr<'a> {
+        AndOr {
+            command1,
+            command2,
+            and,
+        }
+    }
+}
+
+impl Execute for AndOr<'_> {
+    fn execute(&self, stdin: i32, out: bool) -> (i32, bool) {
+        let (stdout, status) = self.command1.execute(stdin, out);
+
+        if (self.and && status) || (!self.and && !status) {
+            return self.command2.execute(-1, true);
+        }
+
+        (stdout, status)
     }
 }
 
 pub struct False {}
 
 impl Execute for False {
-    fn execute(&self, _: i32, _: bool) -> i32 {
-        -1
+    fn execute(&self, _: i32, _: bool) -> (i32, bool) {
+        (-1, false)
     }
 }

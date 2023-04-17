@@ -1,4 +1,4 @@
-use commands::{Cd, CommandSystem, Execute, False, Pipe};
+use commands::*;
 use std::process::Stdio;
 
 mod commands;
@@ -11,12 +11,24 @@ pub fn execute(line: &str) {
 
 fn priority_command(arg: &str) -> u16 {
     match arg {
-        "|" => 2,
-        ">" => 2,
-        ">>" => 2,
         "<" => 2,
+        "|" => 3,
+        ">" => 4,
+        ">>" => 4,
+
         _ => 0,
     }
+}
+
+fn redirect<'a>(args: &'a [&str], ind: usize, redirect_command: Redirect) -> Box<dyn Execute + 'a> {
+    if ind == 0 || ind == args.len() - 1 {
+        eprintln!("Incorrect Redirect");
+        return Box::new(False {});
+    }
+
+    let c = parser(&args[0..ind]);
+
+    Box::new(RedirectCommand::new(c, redirect_command, args[ind + 1]))
 }
 
 fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
@@ -33,22 +45,20 @@ fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
     }
 
     match args[ind] {
+        "<" => redirect(args, ind, Redirect::RedirectIn),
         "|" => {
-            let c1 = if ind != 0 {
-                parser(&args[0..ind])
-            } else {
+            if ind == 0 || ind == args.len() - 1 {
                 eprintln!("Incorrect Pipe");
-                Box::new(False {})
-            };
-            let c2 = if ind != args.len() - 1 {
-                parser(&args[ind + 1..])
-            } else {
-                eprintln!("Incorrect Pipe");
-                Box::new(False {})
-            };
+                return Box::new(False {});
+            }
+
+            let c1 = parser(&args[0..ind]);
+            let c2 = parser(&args[ind + 1..]);
 
             Box::new(Pipe::new(c1, c2))
         }
+        ">" => redirect(args, ind, Redirect::RedirectOut),
+        ">>" => redirect(args, ind, Redirect::RedirectOutAppend),
         "cd" => Box::new(Cd::new(args)),
         _ => Box::new(CommandSystem::new(args[0], &args[1..])),
     }

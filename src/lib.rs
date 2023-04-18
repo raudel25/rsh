@@ -6,13 +6,6 @@ mod commands;
 mod format_line;
 mod parser;
 
-pub fn execute(line: String) {
-    let line = format_line(line);
-    let args: Vec<&str> = line.trim().split_whitespace().collect();
-
-    parser(&args).execute(-1, true);
-}
-
 pub struct Shell {
     current_command: i32,
     variables: HashMap<String, String>,
@@ -26,5 +19,12 @@ impl Shell {
             variables: HashMap::new(),
             history: Vec::new(),
         }
+    }
+
+    pub fn execute(&mut self,line: String) {
+        let line = format_line(line);
+        let args: Vec<&str> = line.trim().split_whitespace().collect();
+    
+        parser(&args).execute(self,-1, true);
     }
 }

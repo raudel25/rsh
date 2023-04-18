@@ -22,6 +22,8 @@ pub fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
         "||" => chain(args, ind, Chain::Or),
         ";" => chain(args, ind, Chain::Multiple),
         "cd" => Box::new(Cd::new(args)),
+        "get" => Box::new(GetSet::new(args,true)),
+        "set" => Box::new(GetSet::new(args,false)),
         "true" => Box::new(SpecialCommand::new(Special::True)),
         "false" => Box::new(SpecialCommand::new(Special::False)),
         "exit" => Box::new(SpecialCommand::new(Special::Exit)),

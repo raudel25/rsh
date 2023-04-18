@@ -1,3 +1,4 @@
+use super::Shell;
 use std::env;
 use std::fs::{File, OpenOptions};
 use std::io::{copy, Read};
@@ -27,7 +28,7 @@ pub enum Special {
 }
 
 pub trait Execute {
-    fn execute(&self, stdin: i32, out: bool) -> (i32, bool);
+    fn execute(&self, shell: &mut Shell, stdin: i32, out: bool) -> (i32, bool);
 }
 
 pub struct CommandSystem<'a> {
@@ -42,7 +43,7 @@ impl CommandSystem<'_> {
 }
 
 impl Execute for CommandSystem<'_> {
-    fn execute(&self, stdin: i32, out: bool) -> (i32, bool) {
+    fn execute(&self, _: &mut Shell, stdin: i32, out: bool) -> (i32, bool) {
         let stdin = if stdin == -1 {
             Stdio::inherit()
         } else {
@@ -94,7 +95,7 @@ impl Cd<'_> {
 }
 
 impl Execute for Cd<'_> {
-    fn execute(&self, _: i32, _: bool) -> (i32, bool) {
+    fn execute(&self, _: &mut Shell, _: i32, _: bool) -> (i32, bool) {
         let new_dir = self.args[1];
 
         let root = Path::new(new_dir);
@@ -121,9 +122,9 @@ impl Pipe<'_> {
 }
 
 impl Execute for Pipe<'_> {
-    fn execute(&self, stdin: i32, out: bool) -> (i32, bool) {
-        let (stdout, status1) = self.command1.execute(stdin, false);
-        let (stdout, status2) = self.command2.execute(stdout, out);
+    fn execute(&self, shell: &mut Shell, stdin: i32, out: bool) -> (i32, bool) {
+        let (stdout, status1) = self.command1.execute(shell, stdin, false);
+        let (stdout, status2) = self.command2.execute(shell, stdout, out);
 
         (stdout, status1 && status2)
     }
@@ -150,7 +151,7 @@ impl RedirectCommand<'_> {
 }
 
 impl Execute for RedirectCommand<'_> {
-    fn execute(&self, stdin: i32, out: bool) -> (i32, bool) {
+    fn execute(&self, shell: &mut Shell, stdin: i32, out: bool) -> (i32, bool) {
         let file = match self.redirect {
             Redirect::In => File::open(self.path),
             Redirect::Out => OpenOptions::new().write(true).create(true).open(self.path),
@@ -175,7 +176,7 @@ impl Execute for RedirectCommand<'_> {
                     false
                 };
 
-                let (stdout, status) = self.command.execute(stdin, out);
+                let (stdout, status) = self.command.execute(shell, stdin, out);
 
                 if self.redirect == Redirect::In || stdout == -1 {
                     return (stdout, status);
@@ -218,23 +219,23 @@ impl ChainCommand<'_> {
 }
 
 impl Execute for ChainCommand<'_> {
-    fn execute(&self, _: i32, out: bool) -> (i32, bool) {
-        let (stdout1, status1) = self.command1.execute(-1, out);
+    fn execute(&self, shell: &mut Shell, _: i32, out: bool) -> (i32, bool) {
+        let (stdout1, status1) = self.command1.execute(shell, -1, out);
         let (mut stdout2, mut status2) = (-1, true);
 
         match self.chain {
             Chain::And => {
                 if status1 {
-                    (stdout2, status2) = self.command2.execute(-1, out);
+                    (stdout2, status2) = self.command2.execute(shell, -1, out);
                 }
             }
             Chain::Or => {
                 if !status1 {
-                    (stdout2, status2) = self.command2.execute(-1, out);
+                    (stdout2, status2) = self.command2.execute(shell, -1, out);
                 }
             }
             Chain::Multiple => {
-                (stdout2, status2) = self.command2.execute(-1, out);
+                (stdout2, status2) = self.command2.execute(shell, -1, out);
             }
         };
 
@@ -253,7 +254,7 @@ impl Execute for ChainCommand<'_> {
         result.push_str(&out1);
         result.push_str(&out2.trim());
 
-        return (str_to_fd(&result), status1 && status2);
+        return (str_to_fd(&result, shell), status1 && status2);
     }
 }
 
@@ -268,12 +269,74 @@ impl SpecialCommand {
 }
 
 impl Execute for SpecialCommand {
-    fn execute(&self, _: i32, _: bool) -> (i32, bool) {
+    fn execute(&self, _: &mut Shell, _: i32, _: bool) -> (i32, bool) {
         match self.special {
             Special::True => (-1, true),
             Special::False => (-1, false),
             Special::Exit => exit(1),
         }
+    }
+}
+
+pub struct GetSet<'a> {
+    args: &'a [&'a str],
+    get: bool,
+}
+
+impl GetSet<'_> {
+    pub fn new<'a>(args: &'a [&'a str], get: bool) -> GetSet<'a> {
+        GetSet { args, get }
+    }
+}
+
+impl Execute for GetSet<'_> {
+    fn execute(&self, shell: &mut Shell, _: i32, out: bool) -> (i32, bool) {
+        let mut stdout = String::new();
+        let mut status = true;
+
+        if !self.get {
+            if self.args.len() == 3 {
+                let _ = &shell
+                    .variables
+                    .insert(self.args[1].to_string(), self.args[2].to_string());
+            } else {
+                status = false;
+                eprintln!("Incorrect command set");
+            }
+        } else {
+            if self.args.len() == 1 {
+                for (var, value) in &shell.variables {
+                    let mut aux = String::new();
+                    aux.push_str(&var);
+                    aux.push_str(" = ");
+                    aux.push_str(&value);
+                    aux.push('\n');
+
+                    stdout.push_str(&aux);
+                }
+            } else if self.args.len() == 2 {
+                if shell.variables.contains_key(self.args[1]) {
+                    stdout.push_str(&shell.variables[self.args[1]]);
+                    stdout.push('\n');
+                } else {
+                    status = false;
+                    eprintln!("Variable not found");
+                }
+            } else {
+                status = false;
+                eprintln!("Incorrect command get");
+            }
+        }
+
+        (
+            if out {
+                print!("{}", stdout);
+                -1
+            } else {
+                str_to_fd(stdout.trim(), shell)
+            },
+            status,
+        )
     }
 }
 
@@ -286,10 +349,10 @@ fn fd_to_str(fd: i32) -> String {
     buffer
 }
 
-fn str_to_fd(buffer: &String) -> i32 {
+fn str_to_fd(buffer: &str, shell: &mut Shell) -> i32 {
     let binding: Vec<&str> = vec![buffer];
     let command = CommandSystem::new("echo", &binding[0..]);
-    let (fd, _) = command.execute(-1, false);
+    let (fd, _) = command.execute(shell, -1, false);
 
     return fd;
 }

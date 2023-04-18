@@ -1,6 +1,6 @@
 use std::env;
 use std::fs::{File, OpenOptions};
-use std::io::copy;
+use std::io::{copy, Read};
 use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
 use std::path::Path;
 use std::process::exit;
@@ -220,7 +220,7 @@ impl ChainCommand<'_> {
 impl Execute for ChainCommand<'_> {
     fn execute(&self, _: i32, out: bool) -> (i32, bool) {
         let (stdout1, status1) = self.command1.execute(-1, out);
-        let (mut stdout2, mut status2) = (1, true);
+        let (mut stdout2, mut status2) = (-1, true);
 
         match self.chain {
             Chain::And => {
@@ -238,7 +238,22 @@ impl Execute for ChainCommand<'_> {
             }
         };
 
-        return (1, status1 && status2);
+        let out1 = if stdout1 != -1 {
+            fd_to_str(stdout1)
+        } else {
+            String::from("")
+        };
+        let out2 = if stdout1 != -1 {
+            fd_to_str(stdout2)
+        } else {
+            String::from("")
+        };
+
+        let mut result = String::new();
+        result.push_str(&out1);
+        result.push_str(&out2.trim());
+
+        return (str_to_fd(&result), status1 && status2);
     }
 }
 
@@ -260,4 +275,21 @@ impl Execute for SpecialCommand {
             Special::Exit => exit(1),
         }
     }
+}
+
+fn fd_to_str(fd: i32) -> String {
+    let mut file = unsafe { File::from_raw_fd(fd) };
+
+    let mut buffer = String::new();
+    file.read_to_string(&mut buffer).unwrap();
+
+    buffer
+}
+
+fn str_to_fd(buffer: &String) -> i32 {
+    let binding: Vec<&str> = vec![buffer];
+    let command = CommandSystem::new("echo", &binding[0..]);
+    let (fd, _) = command.execute(-1, false);
+
+    return fd;
 }

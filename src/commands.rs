@@ -280,11 +280,14 @@ impl SpecialCommand {
 }
 
 impl Execute for SpecialCommand {
-    fn execute(&self, _: &mut Shell, _: i32, _: bool) -> (i32, bool) {
+    fn execute(&self, shell: &mut Shell, _: i32, _: bool) -> (i32, bool) {
         match self.special {
             Special::True => (-1, true),
             Special::False => (-1, false),
-            Special::Exit => exit(1),
+            Special::Exit => {
+                shell.readline.save_history(Shell::history_path().as_str()).unwrap();
+                exit(1)
+            }
         }
     }
 }
@@ -394,11 +397,14 @@ impl Execute for HistoryCommand {
     fn execute(&self, shell: &mut Shell, _: i32, out: bool) -> (i32, bool) {
         let mut stdout = String::new();
 
-        for i in 0..shell.history.len() {
-            stdout.push_str((i + 1).to_string().as_str());
+        let mut ind = 1;
+        for i in shell.readline.history().iter() {
+            stdout.push_str(ind.to_string().as_str());
             stdout.push_str(": ");
-            stdout.push_str(shell.history.get(i).as_str());
+            stdout.push_str(i);
             stdout.push('\n');
+
+            ind += 1;
         }
 
         (

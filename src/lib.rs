@@ -1,31 +1,34 @@
 use format_line::{decode_command, format_line};
 use parser::parser;
+use rustyline::history::{History, SearchDirection};
+use rustyline::DefaultEditor;
 use std::collections::HashMap;
-use std::fs::{File, OpenOptions};
-use std::io::{Read, Write};
 
 mod commands;
 mod format_line;
 mod parser;
 
-const MAX_SIZE_HISTORY: usize = 100;
 const HISTORY_FILE: &str = ".rsh_history";
 
 pub struct Shell {
     current_command: i32,
     variables: HashMap<String, String>,
-    history: History,
+    pub readline: DefaultEditor,
 }
 
 impl Shell {
     pub fn new() -> Shell {
-        let mut history = History::new();
-        Shell::load_history(&mut history);
+        let mut readline = DefaultEditor::new().unwrap();
+
+        match readline.load_history(Shell::history_path().as_str()) {
+            Ok(_) => {}
+            Err(_) => {}
+        }
 
         Shell {
             current_command: -1,
             variables: HashMap::new(),
-            history,
+            readline,
         }
     }
 
@@ -34,8 +37,7 @@ impl Shell {
         let line = self.again_command(line);
 
         let save = decode_command(line.clone());
-        self.history.push(save);
-        self.save_history();
+        self.readline.add_history_entry(save.as_str()).unwrap();
 
         let args: Vec<&str> = line.split_whitespace().collect();
 
@@ -44,6 +46,14 @@ impl Shell {
 
     pub fn home() -> String {
         std::env::home_dir().unwrap().display().to_string()
+    }
+
+    fn history_path() -> String {
+        let mut path = String::from(Shell::home());
+        path.push('/');
+        path.push_str(HISTORY_FILE);
+
+        path
     }
 
     fn again_command(&self, line: String) -> String {
@@ -58,9 +68,14 @@ impl Shell {
 
                 match number {
                     Ok(number) => {
-                        if number > 0 && number <= self.history.len() {
-                            let command = self.history.get(number - 1);
-                            new_line.push_str(command.as_str());
+                        if number > 0 && number <= self.readline.history().len() {
+                            let command = self
+                                .readline
+                                .history()
+                                .get(number - 1, SearchDirection::Forward)
+                                .unwrap()
+                                .unwrap();
+                            new_line.push_str(&command.entry);
                         } else {
                             eprintln!("Incorrect command again");
                             new_line.push_str("false");
@@ -71,8 +86,13 @@ impl Shell {
                         continue;
                     }
                     Err(_) => {
-                        let command = self.history.get(self.history.len() - 1);
-                        new_line.push_str(command.as_str());
+                        let command = self
+                            .readline
+                            .history()
+                            .get(self.readline.history().len() - 1, SearchDirection::Forward)
+                            .unwrap()
+                            .unwrap();
+                        new_line.push_str(&command.entry);
                         new_line.push(' ');
                     }
                 }
@@ -87,92 +107,16 @@ impl Shell {
         }
 
         if b {
-            let command = self.history.get(self.history.len() - 1);
-            new_line.push_str(command.as_str());
+            let command = self
+                .readline
+                .history()
+                .get(self.readline.history().len() - 1, SearchDirection::Forward)
+                .unwrap()
+                .unwrap();
+            new_line.push_str(&command.entry);
             new_line.push(' ');
         }
 
         new_line.trim().to_string()
-    }
-
-    fn load_history(history: &mut History) {
-        let mut path = String::from(Shell::home());
-        path.push('/');
-        path.push_str(HISTORY_FILE);
-
-        let file = File::open(path);
-
-        match file {
-            Ok(mut file) => {
-                let mut buffer = String::new();
-
-                file.read_to_string(&mut buffer).unwrap();
-                let array = buffer.split("\n");
-
-                for command in array {
-                    if command == "" {
-                        continue;
-                    }
-                    history.push(command.to_string());
-                }
-            }
-            Err(_) => {}
-        }
-    }
-
-    fn save_history(&self) {
-        let mut path = String::from(Shell::home());
-        path.push('/');
-        path.push_str(HISTORY_FILE);
-
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(path)
-            .unwrap();
-
-        let mut buffer = String::new();
-
-        for i in 0..self.history.len() {
-            buffer.push_str(self.history.get(i).as_str());
-            buffer.push('\n');
-        }
-
-        file.write(buffer.as_bytes()).unwrap();
-    }
-}
-
-pub struct History {
-    init: usize,
-    array: Vec<String>,
-}
-
-impl History {
-    fn new() -> History {
-        History {
-            init: 0,
-            array: Vec::new(),
-        }
-    }
-
-    pub fn get(&self, index: usize) -> String {
-        if index > self.array.len() {
-            panic!("Index out range");
-        }
-
-        self.array[(self.init + index) % MAX_SIZE_HISTORY].clone()
-    }
-
-    pub fn len(&self) -> usize {
-        self.array.len()
-    }
-
-    fn push(&mut self, command: String) {
-        if self.array.len() == MAX_SIZE_HISTORY {
-            self.array[self.init] = command;
-            self.init = (self.init + 1) % MAX_SIZE_HISTORY;
-        } else {
-            self.array.push(command);
-        }
     }
 }

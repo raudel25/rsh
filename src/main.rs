@@ -1,16 +1,16 @@
 use std::io::{self, Write};
+use rustyline::DefaultEditor;
 
 use rsh::Shell;
 
 fn main() {
     let mut rsh = Shell::new();
+    let mut rl = DefaultEditor::new().unwrap();
 
     loop {
-        print!("> ");
         io::stdout().flush().unwrap();
 
-        let mut line = String::new();
-        io::stdin().read_line(&mut line).unwrap();
+        let line =rl.readline(">> ").unwrap();
 
         rsh.execute(line);
     }

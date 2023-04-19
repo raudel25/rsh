@@ -7,6 +7,8 @@ pub fn format_line(line: String) -> String {
         new_line = format_pat(&new_line, i.0, i.1);
     }
 
+    new_line = encode_command(new_line);
+
     return new_line;
 }
 
@@ -14,6 +16,28 @@ fn stop_line(line: String) -> String {
     let mut args = line.split("#");
 
     return String::from(args.next().unwrap());
+}
+
+fn encode_command(line: String) -> String {
+    let mut new_line = String::new();
+
+    let mut o = true;
+
+    for i in line.chars() {
+        if i == '`' {
+            if o {
+                new_line.push_str("( ");
+            } else {
+                new_line.push_str(" )");
+            };
+        } else {
+            new_line.push(i);
+        }
+
+        o = i == ' ';
+    }
+
+    return new_line;
 }
 
 fn format_pat(line: &String, pat: &str, par: bool) -> String {

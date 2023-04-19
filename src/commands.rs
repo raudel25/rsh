@@ -103,7 +103,7 @@ impl Execute for Cd<'_> {
         }
 
         let home = Shell::home();
-        let new_dir = if self.args.len() == 0 {
+        let new_dir = if self.args.len() == 1 {
             home.as_str()
         } else {
             self.args[1]
@@ -253,12 +253,12 @@ impl Execute for ChainCommand<'_> {
         let out1 = if stdout1 != -1 {
             fd_to_str(stdout1)
         } else {
-            String::from("")
+            String::new()
         };
-        let out2 = if stdout1 != -1 {
+        let out2 = if stdout2 != -1 {
             fd_to_str(stdout2)
         } else {
-            String::from("")
+            String::new()
         };
 
         let mut result = String::new();
@@ -340,7 +340,7 @@ impl Execute for GetSet<'_> {
         }
 
         (
-            if out {
+            if out || stdout == "" {
                 print!("{}", stdout);
                 -1
             } else {
@@ -348,6 +348,37 @@ impl Execute for GetSet<'_> {
             },
             status,
         )
+    }
+}
+
+pub struct ComplexSet<'a> {
+    variable: &'a str,
+    command: Box<dyn Execute + 'a>,
+}
+
+impl ComplexSet<'_> {
+    pub fn new<'a>(variable: &'a str, command: Box<dyn Execute + 'a>) -> ComplexSet<'a> {
+        ComplexSet { variable, command }
+    }
+}
+
+impl Execute for ComplexSet<'_> {
+    fn execute(&self, shell: &mut Shell, _: i32, _: bool) -> (i32, bool) {
+        let (out_command, _) = self.command.execute(shell, -1, false);
+
+        let out_command = fd_to_str(out_command).trim().to_string();
+
+        if out_command == "" {
+            eprintln!("The out of the command is null");
+
+            return (-1, false);
+        }
+
+        shell
+            .variables
+            .insert(self.variable.to_string(), out_command.to_string());
+
+        return (-1, true);
     }
 }
 
@@ -383,6 +414,10 @@ impl Execute for HistoryCommand {
 }
 
 fn fd_to_str(fd: i32) -> String {
+    if fd == -1 {
+        return String::new();
+    }
+
     let mut file = unsafe { File::from_raw_fd(fd) };
 
     let mut buffer = String::new();

@@ -3,8 +3,20 @@ use super::commands::*;
 pub fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
     let mut ind = 0;
     let mut priority = 1;
+    let mut c_parent = 0;
 
     for i in 0..args.len() {
+        if args[i] == "(" {
+            c_parent += 1;
+        }
+        if args[i] == ")" {
+            c_parent -= 1;
+        }
+
+        if c_parent != 0 || args[i] == "(" || args[i] == ")" {
+            continue;
+        }
+
         let aux = priority_command(args[i]);
 
         if aux > priority {
@@ -24,7 +36,7 @@ pub fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
         "cd" => Box::new(Cd::new(args)),
         "history" => Box::new(HistoryCommand::new()),
         "get" => Box::new(GetSet::new(args, true)),
-        "set" => Box::new(GetSet::new(args, false)),
+        "set" => set(args),
         "true" => Box::new(SpecialCommand::new(Special::True)),
         "false" => Box::new(SpecialCommand::new(Special::False)),
         "exit" => Box::new(SpecialCommand::new(Special::Exit)),
@@ -47,7 +59,7 @@ fn priority_command(arg: &str) -> u16 {
 
 fn chain<'a>(args: &'a [&str], ind: usize, chain: Chain) -> Box<dyn Execute + 'a> {
     if (ind == 0 || ind == args.len() - 1) && chain != Chain::Multiple {
-        eprintln!("Incorrect Chain");
+        eprintln!("Incorrect chain");
         return Box::new(SpecialCommand::new(Special::False));
     }
 
@@ -67,7 +79,7 @@ fn chain<'a>(args: &'a [&str], ind: usize, chain: Chain) -> Box<dyn Execute + 'a
 
 fn pipes<'a>(args: &'a [&str], ind: usize) -> Box<dyn Execute + 'a> {
     if ind == 0 || ind == args.len() - 1 {
-        eprintln!("Incorrect Pipe");
+        eprintln!("Incorrect pipe");
         return Box::new(SpecialCommand::new(Special::False));
     }
 
@@ -79,11 +91,26 @@ fn pipes<'a>(args: &'a [&str], ind: usize) -> Box<dyn Execute + 'a> {
 
 fn redirect<'a>(args: &'a [&str], ind: usize, redirect_command: Redirect) -> Box<dyn Execute + 'a> {
     if ind == 0 || ind == args.len() - 1 {
-        eprintln!("Incorrect Redirect");
+        eprintln!("Incorrect redirect");
         return Box::new(SpecialCommand::new(Special::False));
     }
 
     let c = parser(&args[0..ind]);
 
     Box::new(RedirectCommand::new(c, redirect_command, args[ind + 1]))
+}
+
+fn set<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
+    if args.len() > 3 {
+        if args[2] == "(" && args[args.len() - 1] == ")" {
+            let c = parser(&args[3..args.len() - 1]);
+
+            return Box::new(ComplexSet::new(args[1], c));
+        } else {
+            eprintln!("Incorrect command set");
+            return Box::new(SpecialCommand::new(Special::False));
+        }
+    }
+
+    Box::new(GetSet::new(args, false))
 }

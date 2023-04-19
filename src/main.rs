@@ -11,7 +11,7 @@ fn main() {
         io::stdout().flush().unwrap();
 
         let line =rl.readline(">> ").unwrap();
-
+        
         rsh.execute(line);
     }
 }

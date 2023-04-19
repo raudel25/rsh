@@ -396,7 +396,7 @@ impl Execute for HistoryCommand {
 
         for i in 0..shell.history.len() {
             stdout.push_str((i + 1).to_string().as_str());
-            stdout.push_str(" : ");
+            stdout.push_str(": ");
             stdout.push_str(shell.history.get(i).as_str());
             stdout.push('\n');
         }

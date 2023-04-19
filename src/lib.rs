@@ -1,4 +1,4 @@
-use format_line::format_line;
+use format_line::{decode_command, format_line};
 use parser::parser;
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
@@ -31,17 +31,68 @@ impl Shell {
 
     pub fn execute(&mut self, line: String) {
         let line = format_line(line);
+        let line = self.again_command(line);
 
-        self.history.push(line.clone());
+        let save = decode_command(line.clone());
+        self.history.push(save);
         self.save_history();
 
-        let args: Vec<&str> = line.trim().split_whitespace().collect();
+        let args: Vec<&str> = line.split_whitespace().collect();
 
         parser(&args).execute(self, -1, true);
     }
 
     pub fn home() -> String {
         std::env::home_dir().unwrap().display().to_string()
+    }
+
+    fn again_command(&self, line: String) -> String {
+        let mut new_line = String::new();
+        let args = line.split_whitespace();
+
+        let mut b = false;
+
+        for i in args {
+            if b {
+                let number = i.parse::<usize>();
+
+                match number {
+                    Ok(number) => {
+                        if number > 0 && number <= self.history.len() {
+                            let command = self.history.get(number - 1);
+                            new_line.push_str(command.as_str());
+                        } else {
+                            eprintln!("Incorrect command again");
+                            new_line.push_str("false");
+                        }
+
+                        new_line.push(' ');
+                        b = false;
+                        continue;
+                    }
+                    Err(_) => {
+                        let command = self.history.get(self.history.len() - 1);
+                        new_line.push_str(command.as_str());
+                        new_line.push(' ');
+                    }
+                }
+            }
+
+            b = i == "again";
+
+            if !b {
+                new_line.push_str(i);
+                new_line.push(' ');
+            }
+        }
+
+        if b {
+            let command = self.history.get(self.history.len() - 1);
+            new_line.push_str(command.as_str());
+            new_line.push(' ');
+        }
+
+        new_line.trim().to_string()
     }
 
     fn load_history(history: &mut History) {

@@ -1,8 +1,8 @@
 use format_line::format_line;
 use parser::parser;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::Read;
+use std::fs::{File, OpenOptions};
+use std::io::{Read, Write};
 
 mod commands;
 mod format_line;
@@ -31,6 +31,10 @@ impl Shell {
 
     pub fn execute(&mut self, line: String) {
         let line = format_line(line);
+
+        self.history.push(line.clone());
+        self.save_history();
+
         let args: Vec<&str> = line.trim().split_whitespace().collect();
 
         parser(&args).execute(self, -1, true);
@@ -55,15 +59,39 @@ impl Shell {
                 let array = buffer.split("\n");
 
                 for command in array {
+                    if command == "" {
+                        continue;
+                    }
                     history.push(command.to_string());
                 }
             }
             Err(_) => {}
         }
     }
+
+    fn save_history(&self) {
+        let mut path = String::from(Shell::home());
+        path.push('/');
+        path.push_str(HISTORY_FILE);
+
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(path)
+            .unwrap();
+
+        let mut buffer = String::new();
+
+        for i in 0..self.history.len() {
+            buffer.push_str(self.history.get(i).as_str());
+            buffer.push('\n');
+        }
+
+        file.write(buffer.as_bytes()).unwrap();
+    }
 }
 
-struct History {
+pub struct History {
     init: usize,
     array: Vec<String>,
 }
@@ -76,12 +104,16 @@ impl History {
         }
     }
 
-    fn get(&self, index: usize) -> String {
+    pub fn get(&self, index: usize) -> String {
         if index > self.array.len() {
             panic!("Index out range");
         }
 
         self.array[(self.init + index) % MAX_SIZE_HISTORY].clone()
+    }
+
+    pub fn len(&self) -> usize {
+        self.array.len()
     }
 
     fn push(&mut self, command: String) {

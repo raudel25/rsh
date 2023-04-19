@@ -96,7 +96,18 @@ impl Cd<'_> {
 
 impl Execute for Cd<'_> {
     fn execute(&self, _: &mut Shell, _: i32, _: bool) -> (i32, bool) {
-        let new_dir = self.args[1];
+        if self.args.len() > 2 {
+            eprintln!("Incorrect command cd");
+
+            return (-1, false);
+        }
+
+        let home = Shell::home();
+        let new_dir = if self.args.len() == 0 {
+            home.as_str()
+        } else {
+            self.args[1]
+        };
 
         let root = Path::new(new_dir);
 
@@ -333,9 +344,40 @@ impl Execute for GetSet<'_> {
                 print!("{}", stdout);
                 -1
             } else {
-                str_to_fd(stdout.trim(), shell)
+                str_to_fd(stdout.as_str(), shell)
             },
             status,
+        )
+    }
+}
+
+pub struct HistoryCommand {}
+
+impl HistoryCommand {
+    pub fn new() -> HistoryCommand {
+        HistoryCommand {}
+    }
+}
+
+impl Execute for HistoryCommand {
+    fn execute(&self, shell: &mut Shell, _: i32, out: bool) -> (i32, bool) {
+        let mut stdout = String::new();
+
+        for i in 0..shell.history.len() {
+            stdout.push_str((i + 1).to_string().as_str());
+            stdout.push_str(" : ");
+            stdout.push_str(shell.history.get(i).as_str());
+            stdout.push('\n');
+        }
+
+        (
+            if out {
+                print!("{}", stdout);
+                -1
+            } else {
+                str_to_fd(stdout.as_str(), shell)
+            },
+            true,
         )
     }
 }
@@ -350,7 +392,7 @@ fn fd_to_str(fd: i32) -> String {
 }
 
 fn str_to_fd(buffer: &str, shell: &mut Shell) -> i32 {
-    let binding: Vec<&str> = vec![buffer];
+    let binding: Vec<&str> = vec![buffer.trim()];
     let command = CommandSystem::new("echo", &binding[0..]);
     let (fd, _) = command.execute(shell, -1, false);
 

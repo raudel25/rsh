@@ -163,7 +163,7 @@ impl Shell {
     }
 
     pub fn update_background(&mut self) {
-        for i in 1..self.background.len() + 1 {
+        for i in 0..self.background.len(){
             unsafe {
                 let mut status: c_int = 0;
                 waitpid(self.background[i], &mut status as *mut c_int, WNOHANG);

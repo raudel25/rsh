@@ -76,9 +76,7 @@ fn format_pat(line: &String, pat: &str, par: bool) -> String {
         return new_line;
     }
 
-    new_line.push_str(args[0].trim());
-    new_line.push_str(" ");
-    new_line.push_str(pat);
+    new_line.push_str(format!("{} {}", args[0].trim(), pat).as_str());
 
     for i in 1..args.len() - 1 {
         if args[i] == "" && par {
@@ -86,14 +84,10 @@ fn format_pat(line: &String, pat: &str, par: bool) -> String {
             continue;
         };
 
-        new_line.push_str(" ");
-        new_line.push_str(args[i].trim());
-        new_line.push_str(" ");
-        new_line.push_str(pat);
+        new_line.push_str(format!(" {} {}", args[i].trim(), pat).as_str());
     }
 
-    new_line.push_str(" ");
-    new_line.push_str(args[args.len() - 1].trim());
+    new_line.push_str(format!(" {}", args[args.len() - 1].trim()).as_str());
 
     return new_line;
 }

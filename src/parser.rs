@@ -50,6 +50,7 @@ pub fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
         "set" => set(args),
         "if" => conditional(args),
         "&" => background(args, ind),
+        "jobs" => Box::new(Jobs::new()),
         "true" => Box::new(SpecialCommand::new(Special::True)),
         "false" => Box::new(SpecialCommand::new(Special::False)),
         "exit" => Box::new(SpecialCommand::new(Special::Exit)),

@@ -329,17 +329,13 @@ impl Execute for GetSetCommand<'_> {
                 if self.args.len() == 1 {
                     for (var, value) in &shell.variables {
                         let mut aux = String::new();
-                        aux.push_str(var.green().to_string().as_str());
-                        aux.push_str(" = ");
-                        aux.push_str(value.as_str());
-                        aux.push('\n');
+                        aux.push_str(format!("{} = {}\n",var.green().to_string(),value).as_str());
 
                         stdout.push_str(aux.as_str());
                     }
                 } else if self.args.len() == 2 {
                     if shell.variables.contains_key(self.args[1]) {
-                        stdout.push_str(shell.variables[self.args[1]].as_str());
-                        stdout.push('\n');
+                        stdout.push_str(format!("{}\n", shell.variables[self.args[1]]).as_str());
                     } else {
                         status = false;
                         eprintln!("{} variable not found", error());
@@ -408,10 +404,7 @@ impl Execute for HistoryCommand {
 
         let mut ind = 1;
         for i in shell.readline.history().iter() {
-            stdout.push_str(ind.to_string().as_str());
-            stdout.push_str(": ");
-            stdout.push_str(i);
-            stdout.push('\n');
+            stdout.push_str(format!("{}: {}\n", ind.to_string().as_str(), i).as_str());
 
             ind += 1;
         }
@@ -492,6 +485,34 @@ impl Execute for Background<'_> {
         }
 
         (-1, true)
+    }
+}
+
+pub struct Jobs {}
+
+impl Jobs {
+    pub fn new() -> Jobs {
+        Jobs {}
+    }
+}
+
+impl Execute for Jobs {
+    fn execute(&self, shell: &mut Shell, _: i32, out: bool) -> (i32, bool) {
+        let mut stdout = String::new();
+
+        for i in 0..shell.background.len() {
+            stdout.push_str(format!("[{}]\t{}\n", i + 1, shell.background[i]).as_str());
+        }
+
+        (
+            if out {
+                print!("{}", stdout);
+                -1
+            } else {
+                str_to_fd(&stdout, shell)
+            },
+            true,
+        )
     }
 }
 

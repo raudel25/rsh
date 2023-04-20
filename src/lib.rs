@@ -1,3 +1,4 @@
+use colored::*;
 use format_line::{decode_command, format_line};
 use parser::parser;
 use rustyline::history::{History, SearchDirection};
@@ -10,6 +11,9 @@ mod parser;
 
 const HISTORY_FILE: &str = ".rsh_history";
 
+fn error() -> ColoredString {
+    "rsh:".red()
+}
 pub struct Shell {
     current_command: i32,
     variables: HashMap<String, String>,
@@ -44,8 +48,36 @@ impl Shell {
         parser(&args).execute(self, -1, true);
     }
 
+    pub fn prompt() -> String {
+        let mut prompt = String::from("rsh@".yellow().to_string().as_str());
+        prompt.push_str(Shell::user().yellow().to_string().as_str());
+        prompt.push_str(":".yellow().to_string().as_str());
+        prompt.push_str(Shell::current_dir().cyan().to_string().as_str());
+        prompt.push_str("$ ".cyan().to_string().as_str());
+
+        prompt
+    }
+
     pub fn home() -> String {
-        std::env::home_dir().unwrap().display().to_string()
+        let home = std::env::var("HOME");
+
+        match home {
+            Ok(home) => home,
+            Err(_) => std::env::var("USERPROFILE").unwrap(),
+        }
+    }
+
+    pub fn current_dir() -> String {
+        std::env::current_dir().unwrap().display().to_string()
+    }
+
+    pub fn user() -> String {
+        let username = std::env::var("USER");
+
+        match username {
+            Ok(username) => username,
+            Err(_) => std::env::var("USERNAME").unwrap(),
+        }
     }
 
     fn history_path() -> String {
@@ -77,7 +109,7 @@ impl Shell {
                                 .unwrap();
                             new_line.push_str(&command.entry);
                         } else {
-                            eprintln!("Incorrect command again");
+                            eprintln!("{}: incorrect command again", error());
                             new_line.push_str("false");
                         }
 

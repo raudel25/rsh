@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 libc = "0.2.141"
 rustyline = "11.0.0"
+colored = "2.0"

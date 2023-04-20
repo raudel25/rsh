@@ -1,4 +1,5 @@
 use super::commands::*;
+use super::error;
 
 pub fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
     let mut ind = 0;
@@ -35,7 +36,7 @@ pub fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
         ";" => chain(args, ind, Chain::Multiple),
         "cd" => Box::new(Cd::new(args)),
         "history" => Box::new(HistoryCommand::new()),
-        "get" => Box::new(GetSet::new(args, true)),
+        "get" => Box::new(GetSetCommand::new(args, GetSet::Get)),
         "set" => set(args),
         "true" => Box::new(SpecialCommand::new(Special::True)),
         "false" => Box::new(SpecialCommand::new(Special::False)),
@@ -59,7 +60,7 @@ fn priority_command(arg: &str) -> u16 {
 
 fn chain<'a>(args: &'a [&str], ind: usize, chain: Chain) -> Box<dyn Execute + 'a> {
     if (ind == 0 || ind == args.len() - 1) && chain != Chain::Multiple {
-        eprintln!("Incorrect chain");
+        eprintln!("{} incorrect chain", error());
         return Box::new(SpecialCommand::new(Special::False));
     }
 
@@ -79,7 +80,7 @@ fn chain<'a>(args: &'a [&str], ind: usize, chain: Chain) -> Box<dyn Execute + 'a
 
 fn pipes<'a>(args: &'a [&str], ind: usize) -> Box<dyn Execute + 'a> {
     if ind == 0 || ind == args.len() - 1 {
-        eprintln!("Incorrect pipe");
+        eprintln!("{} incorrect pipe", error());
         return Box::new(SpecialCommand::new(Special::False));
     }
 
@@ -91,7 +92,7 @@ fn pipes<'a>(args: &'a [&str], ind: usize) -> Box<dyn Execute + 'a> {
 
 fn redirect<'a>(args: &'a [&str], ind: usize, redirect_command: Redirect) -> Box<dyn Execute + 'a> {
     if ind == 0 || ind == args.len() - 1 {
-        eprintln!("Incorrect redirect");
+        eprintln!("{} incorrect redirect", error());
         return Box::new(SpecialCommand::new(Special::False));
     }
 
@@ -107,10 +108,10 @@ fn set<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
 
             return Box::new(ComplexSet::new(args[1], c));
         } else {
-            eprintln!("Incorrect command set");
+            eprintln!("{} incorrect command set", error());
             return Box::new(SpecialCommand::new(Special::False));
         }
     }
 
-    Box::new(GetSet::new(args, false))
+    Box::new(GetSetCommand::new(args, GetSet::Set))
 }

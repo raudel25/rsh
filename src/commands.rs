@@ -1,4 +1,6 @@
-use super::Shell;
+use colored::Colorize;
+
+use super::{error, Shell};
 use std::env;
 use std::fs::{File, OpenOptions};
 use std::io::{copy, Read};
@@ -25,6 +27,11 @@ pub enum Special {
     True,
     False,
     Exit,
+}
+
+pub enum GetSet {
+    Get,
+    Set,
 }
 
 pub trait Execute {
@@ -74,10 +81,10 @@ impl Execute for CommandSystem<'_> {
 
                         return (-1, status.success());
                     }
-                    Err(e) => eprintln!("{}", e),
+                    Err(e) => eprintln!("{} {}", error(), e),
                 };
             }
-            Err(e) => eprintln!("{}", e),
+            Err(e) => eprintln!("{} {}", error(), e),
         };
 
         (-1, false)
@@ -97,7 +104,7 @@ impl Cd<'_> {
 impl Execute for Cd<'_> {
     fn execute(&self, _: &mut Shell, _: i32, _: bool) -> (i32, bool) {
         if self.args.len() > 2 {
-            eprintln!("Incorrect command cd");
+            eprintln!("{} incorrect command cd", error());
 
             return (-1, false);
         }
@@ -112,7 +119,7 @@ impl Execute for Cd<'_> {
         let root = Path::new(new_dir);
 
         if let Err(e) = env::set_current_dir(&root) {
-            eprintln!("{}", e);
+            eprintln!("{} {}", error(), e);
 
             return (-1, false);
         }
@@ -199,10 +206,10 @@ impl Execute for RedirectCommand<'_> {
                     Ok(_) => {
                         return (-1, status);
                     }
-                    Err(e) => eprintln!("{}", e),
+                    Err(e) => eprintln!("{} {}", error(), e),
                 };
             }
-            Err(e) => eprintln!("{}", e),
+            Err(e) => eprintln!("{} {}", error(), e),
         }
 
         (-1, false)
@@ -285,60 +292,66 @@ impl Execute for SpecialCommand {
             Special::True => (-1, true),
             Special::False => (-1, false),
             Special::Exit => {
-                shell.readline.save_history(Shell::history_path().as_str()).unwrap();
+                shell
+                    .readline
+                    .save_history(Shell::history_path().as_str())
+                    .unwrap();
                 exit(1)
             }
         }
     }
 }
 
-pub struct GetSet<'a> {
+pub struct GetSetCommand<'a> {
     args: &'a [&'a str],
-    get: bool,
+    get_set: GetSet,
 }
 
-impl GetSet<'_> {
-    pub fn new<'a>(args: &'a [&'a str], get: bool) -> GetSet<'a> {
-        GetSet { args, get }
+impl GetSetCommand<'_> {
+    pub fn new<'a>(args: &'a [&'a str], get_set: GetSet) -> GetSetCommand<'a> {
+        GetSetCommand { args, get_set }
     }
 }
 
-impl Execute for GetSet<'_> {
+impl Execute for GetSetCommand<'_> {
     fn execute(&self, shell: &mut Shell, _: i32, out: bool) -> (i32, bool) {
         let mut stdout = String::new();
         let mut status = true;
 
-        if !self.get {
-            if self.args.len() == 3 {
-                let _ = &shell
-                    .variables
-                    .insert(self.args[1].to_string(), self.args[2].to_string());
-            } else {
-                status = false;
-                eprintln!("Incorrect command set");
-            }
-        } else {
-            if self.args.len() == 1 {
-                for (var, value) in &shell.variables {
-                    let mut aux = String::new();
-                    aux.push_str(&var);
-                    aux.push_str(" = ");
-                    aux.push_str(&value);
-                    aux.push('\n');
-
-                    stdout.push_str(&aux);
-                }
-            } else if self.args.len() == 2 {
-                if shell.variables.contains_key(self.args[1]) {
-                    stdout.push_str(&shell.variables[self.args[1]]);
-                    stdout.push('\n');
+        match self.get_set {
+            GetSet::Set => {
+                if self.args.len() == 3 {
+                    let _ = &shell
+                        .variables
+                        .insert(self.args[1].to_string(), self.args[2].to_string());
                 } else {
                     status = false;
-                    eprintln!("Variable not found");
+                    eprintln!("{} incorrect command set", error());
                 }
-            } else {
-                status = false;
-                eprintln!("Incorrect command get");
+            }
+            GetSet::Get => {
+                if self.args.len() == 1 {
+                    for (var, value) in &shell.variables {
+                        let mut aux = String::new();
+                        aux.push_str(var.green().to_string().as_str());
+                        aux.push_str(" = ");
+                        aux.push_str(value.as_str());
+                        aux.push('\n');
+
+                        stdout.push_str(aux.as_str());
+                    }
+                } else if self.args.len() == 2 {
+                    if shell.variables.contains_key(self.args[1]) {
+                        stdout.push_str(shell.variables[self.args[1]].as_str());
+                        stdout.push('\n');
+                    } else {
+                        status = false;
+                        eprintln!("{} variable not found", error());
+                    }
+                } else {
+                    status = false;
+                    eprintln!("{} incorrect command get", error());
+                }
             }
         }
 
@@ -372,7 +385,7 @@ impl Execute for ComplexSet<'_> {
         let out_command = fd_to_str(out_command).trim().to_string();
 
         if out_command == "" {
-            eprintln!("The out of the command is null");
+            eprintln!("{} the out of the command is null", error());
 
             return (-1, false);
         }

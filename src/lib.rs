@@ -9,6 +9,9 @@ extern crate rustyline;
 use rustyline::history::{History, SearchDirection};
 use rustyline::DefaultEditor;
 
+extern crate libc;
+use libc::{c_int, waitpid, WNOHANG};
+
 mod commands;
 mod format_line;
 mod parser;
@@ -23,6 +26,7 @@ fn error() -> ColoredString {
 }
 pub struct Shell {
     variables: HashMap<String, String>,
+    background: Vec<i32>,
     pub readline: DefaultEditor,
 }
 
@@ -37,6 +41,7 @@ impl Shell {
 
         Shell {
             variables: HashMap::new(),
+            background: Vec::new(),
             readline,
         }
     }
@@ -155,5 +160,19 @@ impl Shell {
         }
 
         new_line.trim().to_string()
+    }
+
+    pub fn update_background(&mut self) {
+        for i in 1..self.background.len() + 1 {
+            unsafe {
+                let mut status: c_int = 0;
+                waitpid(self.background[i], &mut status as *mut c_int, WNOHANG);
+
+                if status != 0 {
+                    println!("[{}]\tDone\t{}", i + 1, self.background[i]);
+                    self.background.remove(i);
+                }
+            }
+        }
     }
 }

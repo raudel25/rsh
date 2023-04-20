@@ -32,6 +32,7 @@ fn main() {
             CURRENT_COMMAND = -1;
             SIGNAL_CTRL_C = true;
         }
+        rsh.update_background();
 
         let line = rsh.readline.readline(Shell::prompt().as_str());
 

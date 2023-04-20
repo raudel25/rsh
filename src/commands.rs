@@ -9,6 +9,9 @@ use std::process::{Command, Stdio};
 extern crate colored;
 use colored::Colorize;
 
+extern crate libc;
+use libc::{fork, setpgid};
+
 use super::{error, Shell};
 
 #[derive(PartialEq)]
@@ -458,6 +461,37 @@ impl Execute for Conditional<'_> {
         let fd = fd2_to_fd(stdout1, stdout2, shell);
 
         return (fd, status);
+    }
+}
+
+pub struct Background<'a> {
+    command: Box<dyn Execute + 'a>,
+}
+
+impl Background<'_> {
+    pub fn new<'a>(command: Box<dyn Execute + 'a>) -> Background<'a> {
+        Background { command }
+    }
+}
+
+impl Execute for Background<'_> {
+    fn execute(&self, shell: &mut Shell, _: i32, _: bool) -> (i32, bool) {
+        let pid = unsafe { fork() };
+
+        if pid == 0 {
+            unsafe { setpgid(0, 0) };
+
+            self.command.execute(shell, -1, true);
+
+            exit(1)
+        } else if pid > 0 {
+            unsafe { setpgid(pid, pid) };
+
+            println!("[{}]\t{}", shell.background.len() + 1, pid);
+            shell.background.push(pid);
+        }
+
+        (-1, true)
     }
 }
 

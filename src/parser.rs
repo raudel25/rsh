@@ -49,6 +49,7 @@ pub fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
         "get" => Box::new(GetSetCommand::new(args, GetSet::Get)),
         "set" => set(args),
         "if" => conditional(args),
+        "&" => background(args, ind),
         "true" => Box::new(SpecialCommand::new(Special::True)),
         "false" => Box::new(SpecialCommand::new(Special::False)),
         "exit" => Box::new(SpecialCommand::new(Special::Exit)),
@@ -65,6 +66,7 @@ fn priority_command(arg: &str) -> u16 {
         "&&" => 5,
         "||" => 5,
         ";" => 6,
+        "&" => 7,
         _ => 0,
     }
 }
@@ -194,6 +196,23 @@ fn conditional<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
         command
     } else {
         let c = parser(&args[pos_end + 1..]);
+
+        Box::new(ChainCommand::new(command, c, Chain::Multiple))
+    }
+}
+
+fn background<'a>(args: &'a [&str], ind: usize) -> Box<dyn Execute + 'a> {
+    if ind == 0 {
+        return Box::new(SpecialCommand::new(Special::False));
+    }
+
+    let command = parser(&args[0..ind]);
+    let command = Box::new(Background::new(command));
+
+    if args.len() - 1 == ind {
+        command
+    } else {
+        let c = parser(&args[ind + 1..]);
 
         Box::new(ChainCommand::new(command, c, Chain::Multiple))
     }

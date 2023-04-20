@@ -5,16 +5,26 @@ pub fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
     let mut ind = 0;
     let mut priority = 1;
     let mut c_parent = 0;
+    let mut c_cond = 0;
 
     for i in 0..args.len() {
         if args[i] == "(" {
             c_parent += 1;
         }
+        if args[i] == "if" {
+            c_cond += 1;
+        }
         if args[i] == ")" {
             c_parent -= 1;
         }
+        if args[i] == "end" {
+            c_cond -= 1;
+        }
 
         if c_parent != 0 || args[i] == "(" || args[i] == ")" {
+            continue;
+        }
+        if c_cond != 0 || args[i] == "if" || args[i] == "end" {
             continue;
         }
 
@@ -38,6 +48,7 @@ pub fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
         "history" => Box::new(HistoryCommand::new()),
         "get" => Box::new(GetSetCommand::new(args, GetSet::Get)),
         "set" => set(args),
+        "if" => conditional(args),
         "true" => Box::new(SpecialCommand::new(Special::True)),
         "false" => Box::new(SpecialCommand::new(Special::False)),
         "exit" => Box::new(SpecialCommand::new(Special::Exit)),
@@ -114,4 +125,76 @@ fn set<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
     }
 
     Box::new(GetSetCommand::new(args, GetSet::Set))
+}
+
+fn conditional<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
+    let mut c_cond = 0;
+    let mut pos_then = 0;
+    let mut pos_else = 0;
+    let mut pos_end = 0;
+
+    for i in 0..args.len() {
+        if args[i] == "if" {
+            c_cond += 1;
+        }
+        if args[i] == "end" {
+            c_cond -= 1;
+
+            if c_cond == 0 {
+                pos_end = i
+            }
+        }
+
+        if c_cond == 1 {
+            match args[i] {
+                "then" => pos_then = i,
+                "else" => pos_else = i,
+                _ => {}
+            }
+        }
+    }
+
+    let mut e = false;
+
+    if c_cond != 0 && pos_then == 0 && pos_end == 0 {
+        e = true;
+    }
+
+    if pos_else == 0 {
+        if pos_then < 2 || pos_end - pos_then < 2 {
+            e = true;
+        }
+    } else {
+        if pos_then < 2 || pos_else - pos_then < 2 || pos_end - pos_else < 2 {
+            e = true;
+        }
+    }
+
+    if e {
+        eprintln!("{} incorrect conditional", error());
+
+        return Box::new(SpecialCommand::new(Special::False));
+    }
+
+    let command = if pos_else == 0 {
+        let c1 = parser(&args[1..pos_then]);
+        let c2 = parser(&args[pos_then + 1..pos_end]);
+        let c3 = Box::new(SpecialCommand::new(Special::False));
+
+        Box::new(Conditional::new(c1, c2, c3))
+    } else {
+        let c1 = parser(&args[1..pos_then]);
+        let c2 = parser(&args[pos_then + 1..pos_else]);
+        let c3 = parser(&args[pos_else + 1..pos_end]);
+
+        Box::new(Conditional::new(c1, c2, c3))
+    };
+
+    if pos_end == args.len() - 1 {
+        command
+    } else {
+        let c = parser(&args[pos_end + 1..]);
+
+        Box::new(ChainCommand::new(command, c, Chain::Multiple))
+    }
 }

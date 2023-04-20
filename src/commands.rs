@@ -257,22 +257,9 @@ impl Execute for ChainCommand<'_> {
             }
         };
 
-        let out1 = if stdout1 != -1 {
-            fd_to_str(stdout1)
-        } else {
-            String::new()
-        };
-        let out2 = if stdout2 != -1 {
-            fd_to_str(stdout2)
-        } else {
-            String::new()
-        };
+        let fd = fd2_to_fd(stdout1, stdout2, shell);
 
-        let mut result = String::new();
-        result.push_str(&out1);
-        result.push_str(&out2.trim());
-
-        return (str_to_fd(&result, shell), status1 && status2);
+        (fd, status1 && status2)
     }
 }
 
@@ -432,6 +419,42 @@ impl Execute for HistoryCommand {
     }
 }
 
+pub struct Conditional<'a> {
+    c_if: Box<dyn Execute + 'a>,
+    c_then: Box<dyn Execute + 'a>,
+    c_else: Box<dyn Execute + 'a>,
+}
+
+impl Conditional<'_> {
+    pub fn new<'a>(
+        c_if: Box<dyn Execute + 'a>,
+        c_then: Box<dyn Execute + 'a>,
+        c_else: Box<dyn Execute + 'a>,
+    ) -> Conditional<'a> {
+        Conditional {
+            c_if,
+            c_then,
+            c_else,
+        }
+    }
+}
+
+impl Execute for Conditional<'_> {
+    fn execute(&self, shell: &mut Shell, _: i32, out: bool) -> (i32, bool) {
+        let (stdout1, status) = self.c_if.execute(shell, -1, out);
+
+        let (stdout2, status) = if status {
+            self.c_then.execute(shell, -1, out)
+        } else {
+            self.c_else.execute(shell, -1, out)
+        };
+
+        let fd = fd2_to_fd(stdout1, stdout2, shell);
+
+        return (fd, status);
+    }
+}
+
 fn fd_to_str(fd: i32) -> String {
     if fd == -1 {
         return String::new();
@@ -451,4 +474,23 @@ fn str_to_fd(buffer: &str, shell: &mut Shell) -> i32 {
     let (fd, _) = command.execute(shell, -1, false);
 
     return fd;
+}
+
+fn fd2_to_fd(stdout1: i32, stdout2: i32, shell: &mut Shell) -> i32 {
+    let out1 = if stdout1 != -1 {
+        fd_to_str(stdout1)
+    } else {
+        String::new()
+    };
+    let out2 = if stdout2 != -1 {
+        fd_to_str(stdout2)
+    } else {
+        String::new()
+    };
+
+    let mut result = String::new();
+    result.push_str(&out1);
+    result.push_str(&out2.trim());
+
+    str_to_fd(&result, shell)
 }

@@ -1,13 +1,20 @@
-use colored::*;
 use format_line::{decode_command, format_line};
 use parser::parser;
+use std::collections::HashMap;
+
+extern crate colored;
+use colored::*;
+
+extern crate rustyline;
 use rustyline::history::{History, SearchDirection};
 use rustyline::DefaultEditor;
-use std::collections::HashMap;
 
 mod commands;
 mod format_line;
 mod parser;
+
+pub static mut CURRENT_COMMAND: i32 = -1;
+pub static mut SIGNAL_CTRL_C: bool = true;
 
 const HISTORY_FILE: &str = ".rsh_history";
 
@@ -15,7 +22,6 @@ fn error() -> ColoredString {
     "rsh:".red()
 }
 pub struct Shell {
-    current_command: i32,
     variables: HashMap<String, String>,
     pub readline: DefaultEditor,
 }
@@ -30,7 +36,6 @@ impl Shell {
         }
 
         Shell {
-            current_command: -1,
             variables: HashMap::new(),
             readline,
         }

@@ -1,6 +1,3 @@
-use colored::Colorize;
-
-use super::{error, Shell};
 use std::env;
 use std::fs::{File, OpenOptions};
 use std::io::{copy, Read};
@@ -8,6 +5,11 @@ use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
 use std::path::Path;
 use std::process::exit;
 use std::process::{Command, Stdio};
+
+extern crate colored;
+use colored::Colorize;
+
+use super::{error, Shell};
 
 #[derive(PartialEq)]
 pub enum Redirect {
@@ -72,6 +74,10 @@ impl Execute for CommandSystem<'_> {
             Ok(mut command) => {
                 match command.wait() {
                     Ok(status) => {
+                        unsafe {
+                            super::CURRENT_COMMAND = command.id() as i32;
+                        }
+
                         if !out {
                             return (
                                 command.stdout.take().unwrap().into_raw_fd(),

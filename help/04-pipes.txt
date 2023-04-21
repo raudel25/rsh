@@ -1,0 +1,25 @@
+En este apartado encontramos 4 comandos ( | , < , > , >> ) que nos permitirán redirigir la entrada y la salida de los
+comandos que ejecutemos.\
+\
+El comando command1 | command2 ejecuta <command1>, redirecciona la salida de <command1> a la entrada de <command2> y luego
+ejecuta <command2>.\
+\
+El comando command < file redirecciona el contenido del archivo <file> a la entrada de <command> y ejecuta <command>.\
+\
+El comando command > file ejecuta <command> redirecciona la salida de <command> hacia el archivo <file>, sobrescribiendo\
+el contenido de <file>.\
+\
+El comando command >> file hace lo mismo que el comando anterior pero escribe al final de <file> sin sobrescribir el\
+contenido de dicho archivo.\
+\
+Adicionalmente se pueden combinar todas estos comandos en una sola línea.\
+\
+Ejemplo:\
+\
+rsh $ command1 | command2\
+rsh $ command < file\
+rsh $ command > file\
+rsh $ command >> file\
+rsh $ command1 < file1 | command2 | command3 > file2 # el contenido de file1 se redirecciona a la entrada de command1,
+la salida de command1 se redirecciona a la entrada de command2, la salida de command2 se redirecciona a la entrada de
+command3 y la salida de command3 se redirecciona a file2.\

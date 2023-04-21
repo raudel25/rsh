@@ -1,0 +1,18 @@
+En este apartado encontramos 4 comandos (if, then, else y end) que nos permiten realizar una operación condicional en una
+sola línea.\
+\
+El comando if <condition> then <execute1> else <execute2> end, primero ejecuta el comando <condition> y si este tiene éxito
+entonces se ejecuta <execute1> en caso contrario se ejecuta <execute2>, end se usa para indicar en fin de la operación
+condicional. El comando else puede no especificarse: if <condition> then <execute> end, si <condition> tiene exito <execute>
+se ejecutará en caso contrario no pasa nada.\
+\
+Adicionalmente contamos con otros 2 comandos especiales (true, false) que simulan una condición que siempre se cumple y otra
+que nunca se cumple respectivamente. Adicionalmente se puede anidar una operación condicional dentro de otra.\
+\
+Ejemplo:\
+\
+rsh $ if cond then execute end\
+rsh $ if cond then execute1 else execute2 end\
+rsh $ if cond1 then if cond2 then execute1 end else execute2 end\
+rsh $ if true then execute end                                   # siempre se ejecutará execute\
+rsh $ if false then execute end                                  # nunca se ejecutará execute\

@@ -12,9 +12,9 @@ use colored::Colorize;
 extern crate libc;
 use libc::{c_int, fork, setpgid, waitpid, WUNTRACED};
 
-use crate::CURRENT_COMMAND;
-
+use super::help::{COMMANDS, COMMANDS_HELP};
 use super::{error, Shell};
+use crate::CURRENT_COMMAND;
 
 #[derive(PartialEq)]
 pub enum Redirect {
@@ -597,6 +597,63 @@ impl Execute for Foreground<'_> {
         shell.background.remove(ind - 1);
 
         (-1, true)
+    }
+}
+
+pub struct Help<'a> {
+    args: &'a [&'a str],
+}
+
+impl Help<'_> {
+    pub fn new<'a>(args: &'a [&'a str]) -> Help {
+        Help { args }
+    }
+}
+
+impl Execute for Help<'_> {
+    fn execute(&self, shell: &mut Shell, _: i32, out: bool) -> (i32, bool) {
+        let mut stdout = String::new();
+
+        if self.args.len() > 2 {
+            eprintln!("{} incorrect command help", error());
+
+            return (-1, false);
+        }
+
+        if self.args.len() == 1 {
+            for i in 0..COMMANDS.len() {
+                stdout.push_str(
+                    format!(
+                        "{}: {}\n",
+                        COMMANDS[i].green().to_string().as_str(),
+                        COMMANDS_HELP[i]
+                    )
+                    .as_str(),
+                );
+            }
+        } else {
+            for i in 0..COMMANDS.len() {
+                if COMMANDS[i] == self.args[1] {
+                    stdout.push_str(COMMANDS_HELP[i]);
+                }
+            }
+        }
+
+        if stdout == "" {
+            eprintln!("{} command not found", error());
+
+            return (-1, false);
+        }
+
+        (
+            if out {
+                print!("{}", stdout);
+                -1
+            } else {
+                str_to_fd(stdout.as_str(), shell)
+            },
+            true,
+        )
     }
 }
 

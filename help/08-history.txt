@@ -1,0 +1,17 @@
+El comando history muestra los últimos 100 comandos ejecutados en el shell, enumerados desde 1 para el más antiguo hasta 100
+para el último comando.\
+\
+Ejemplo:\
+\
+rsh $ history\
+1: ls\
+2: cd\
+3: history\
+rsh $ cd      # se guarda en el historial\
+rsh $ history\
+1: ls\
+2: cd\
+3: history\
+4: cd\
+5: history\
+rsh $  hola   # no se guarda en el historial\

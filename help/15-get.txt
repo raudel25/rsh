@@ -1,0 +1,13 @@
+El comando get <c> muestra el valor de la variable <c> en el sistema. Si la variable no existe el comando no tendrá éxito.
+Si <c> no se especifica el comando lista todas las variables.\
+\
+Ejemplo:\
+\
+rsh $ set a hola\
+rsh $ get a      # se muestra el valor de a\
+hola\
+rsh $ get b      # b no se encuentra el sistema\
+rsh $ set c 25\
+rsh $ get        # se muestran todas las variables del sistema\
+a = hola\
+c = 25\

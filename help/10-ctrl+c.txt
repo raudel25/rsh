@@ -1,0 +1,2 @@
+ctrl+c envía una señal SIGINT al comando que se está ejecutando, si se ejecuta nuevamente ctrl+c se envía una señal
+SIGKILL al comando que se está ejecutando.\

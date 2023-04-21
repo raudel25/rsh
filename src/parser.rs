@@ -55,6 +55,7 @@ pub fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
         "fg" => Box::new(Foreground::new(args)),
         "true" => Box::new(SpecialCommand::new(Special::True)),
         "false" => Box::new(SpecialCommand::new(Special::False)),
+        "help" => Box::new(Help::new(args)),
         "exit" => Box::new(SpecialCommand::new(Special::Exit)),
         _ => Box::new(CommandSystem::new(args[0], &args[1..])),
     }

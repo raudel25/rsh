@@ -1,0 +1,13 @@
+El comando set <c> <value> permite introducir una nueva variable al sistema o modificar el valor de una ya existente.
+Las variables introducidas deben ser letras minúsculas del alfabeto inglés. Si <value> es está entre comillas `command` se
+ejecuta command y la salida de de ese comando se almacena como valor de <c>, si la salida del comando es vacía la ejecución
+de set no tiene éxito y por tanto no se guarda la variable.\
+\
+Ejemplo:\
+\
+rsh $ set a hola # como a no existe se crea en el sistema con valor hola\
+rsh $ set a `ls` # el valor de a se modifica con la salida de ls\
+archivo.txt rsh\
+rsh $ get a\
+archivo.txt rsh\
+rsh $ set a `cd` # la salida de cd es vacía por tanto el set falla y el valor de la variable no cambia\

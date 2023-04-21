@@ -1,0 +1,13 @@
+El comando fg <number> trae el proceso enumerado con <number> desde el background a el foreground. Si <number> no se
+especifica se toma el último proceso enviado hacia el background.\
+\
+Ejemplo:\
+\
+rsh $ cp movie.mkv .. &\
+rsh $ rm file.zip &\
+rsh $ jobs\
+[1]     cp movie.mkv ..     1925\
+[2]     rm file.zip     1927\
+rsh $ fg 1                      # el comando <cp movie.mkv ..> se trae de vuelta al foreground\
+                                  # esperamos hasta que <cp movie.mkv ..> se ejecute\
+rsh $ fg                        # el comando <rm file.zip> se trae de vuelta al foreground\

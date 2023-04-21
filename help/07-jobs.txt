@@ -1,0 +1,9 @@
+El comando jobs lista todos los procesos que están ocurriendo en el background.\
+\
+Ejemplo:\
+\
+rsh $ cp movie.mkv .. &\
+rsh $ rm file.zip &\
+rsh $ jobs             # lista los 2 comandos anteriores ocurriendo en el background\
+[1]     cp movie.mkv ..     1925\
+[2]     rm file.zip     1927\

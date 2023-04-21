@@ -1,0 +1,13 @@
+El comando again <number> ejecuta un comando almacenado en el historial <number> viene dado por el orden en que se
+ejecutaron los comandos desde 1 para el más viejo hasta 100 para el último, si <number> no se especifica se ejecuta 
+el ultimo comando. Una vez que se ejecuta el comando especificado anteriormente este pasa al historial.\
+\
+Ejemplo:\
+\
+rsh $ history\
+1: ls\
+2: cd\
+3: pwd\
+4: history\
+rsh $ again 1 # se ejecuta ls\
+rsh $ again   # se ejecuta ls dado que fue el último comando\

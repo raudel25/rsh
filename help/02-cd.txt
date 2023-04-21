@@ -1,0 +1,7 @@
+El comando cd <dir> cambia el directorio actual del shell al directorio especificado por el usuario, si <dir> no se 
+especifica se toma por default el home como directorio.\
+\
+Ejemplo:\
+\
+rsh $ cd new_dir # se mueve hacia la carpeta new_dir\
+rsh $ cd         # se mueve hacia home\

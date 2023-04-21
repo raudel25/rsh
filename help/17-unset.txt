@@ -1,0 +1,9 @@
+El comando unset <c> elimina la variable <c> del sistema con su respectivo valor. Si <c> no existe el comando no tiene
+éxito.\
+\
+Ejemplo:\
+\
+rsh $ set c hola\
+rsh $ get c\
+hola\
+rsh $ unset c # c se elimina del sistema\

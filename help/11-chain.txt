@@ -1,0 +1,19 @@
+En este apartado tenemos los comandos ( ; , || , && ).\
+\
+El operador ; permite ejecutar varios comandos en la misma línea.\
+\
+El comando command1 && command2 ejecuta command1 y si este tiene éxito ejecuta command2\
+\
+El comando command1 || command2 ejecuta command1 y si este no tiene éxito ejecuta command2 en caso contrario no se ejecuta
+más nada.\
+\
+Adicionalmente se pueden combinar todos estos comandos en una sola línea. Contamos con otros 2 comandos especiales
+(true, false) que simulan una condición que siempre se cumple y otra que nunca se cumple respectivamente.\
+\
+Ejemplo:\
+\
+rsh $ command1; command2;\
+rsh $ command1 && command2\
+rsh $ command1 || command2\
+rsh $ command1 && command2; || command3 # se ejecutará command1, si este tiene éxito se ejecutará command2, si ambos
+commandos command1 y command2 tienen éxito no se ejecutará más nada en caso contrario se ejecutará command3\

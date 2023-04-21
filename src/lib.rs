@@ -14,6 +14,7 @@ use libc::{c_int, waitpid, WNOHANG};
 
 mod commands;
 mod format_line;
+mod help;
 mod parser;
 
 pub static mut CURRENT_COMMAND: i32 = -1;

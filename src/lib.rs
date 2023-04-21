@@ -17,9 +17,15 @@ mod format_line;
 mod parser;
 
 pub static mut CURRENT_COMMAND: i32 = -1;
-pub static mut SIGNAL_CTRL_C: bool = true;
+pub static mut SIGNAL_CTRL_C: Signal = Signal::Default;
 
 const HISTORY_FILE: &str = ".rsh_history";
+
+pub enum Signal {
+    SigInt,
+    SigKill,
+    Default,
+}
 
 fn error() -> ColoredString {
     "rsh:".red()
@@ -163,7 +169,7 @@ impl Shell {
     }
 
     pub fn update_background(&mut self) {
-        for i in 0..self.background.len(){
+        for i in 0..self.background.len() {
             unsafe {
                 let mut status: c_int = 0;
                 waitpid(self.background[i], &mut status as *mut c_int, WNOHANG);

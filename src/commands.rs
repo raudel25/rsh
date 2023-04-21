@@ -10,7 +10,9 @@ extern crate colored;
 use colored::Colorize;
 
 extern crate libc;
-use libc::{fork, setpgid};
+use libc::{c_int, fork, setpgid, waitpid, WUNTRACED};
+
+use crate::{CURRENT_COMMAND};
 
 use super::{error, Shell};
 
@@ -329,7 +331,7 @@ impl Execute for GetSetCommand<'_> {
                 if self.args.len() == 1 {
                     for (var, value) in &shell.variables {
                         let mut aux = String::new();
-                        aux.push_str(format!("{} = {}\n",var.green().to_string(),value).as_str());
+                        aux.push_str(format!("{} = {}\n", var.green().to_string(), value).as_str());
 
                         stdout.push_str(aux.as_str());
                     }
@@ -469,19 +471,23 @@ impl Background<'_> {
 
 impl Execute for Background<'_> {
     fn execute(&self, shell: &mut Shell, _: i32, _: bool) -> (i32, bool) {
-        let pid = unsafe { fork() };
+        unsafe {
+            match fork() {
+                0 => {
+                    setpgid(0, 0);
 
-        if pid == 0 {
-            unsafe { setpgid(0, 0) };
+                    self.command.execute(shell, -1, true);
 
-            self.command.execute(shell, -1, true);
+                    exit(1);
+                }
 
-            exit(1)
-        } else if pid > 0 {
-            unsafe { setpgid(pid, pid) };
+                pid => {
+                    setpgid(pid, pid);
 
-            println!("[{}]\t{}", shell.background.len() + 1, pid);
-            shell.background.push(pid);
+                    println!("[{}]\t{}", shell.background.len() + 1, pid);
+                    shell.background.push(pid);
+                }
+            }
         }
 
         (-1, true)
@@ -513,6 +519,69 @@ impl Execute for Jobs {
             },
             true,
         )
+    }
+}
+
+pub struct Foreground<'a> {
+    args: &'a [&'a str],
+}
+
+impl Foreground<'_> {
+    pub fn new<'a>(args: &'a [&'a str]) -> Foreground {
+        Foreground { args }
+    }
+}
+
+impl Execute for Foreground<'_> {
+    fn execute(&self, shell: &mut Shell, _: i32, _: bool) -> (i32, bool) {
+        if shell.background.len() == 0 {
+            return (-1, false);
+        }
+
+        if self.args.len() > 2 {
+            eprintln!("{} incorrect command fg", error());
+
+            return (-1, false);
+        }
+
+        let mut ind = shell.background.len();
+
+        if self.args.len() == 2 {
+            match self.args[1].parse::<usize>() {
+                Ok(num) => {
+                    ind = num;
+
+                    if num > shell.background.len() {
+                        eprintln!("{} incorrect command fg", error());
+
+                        return (-1, false);
+                    }
+                }
+                Err(_) => {
+                    eprintln!("{} incorrect command fg", error());
+
+                    return (-1, false);
+                }
+            }
+        };
+
+        unsafe {
+            CURRENT_COMMAND = shell.background[ind - 1];
+
+            loop {
+                let mut status: c_int = 0;
+
+                waitpid(shell.background[ind - 1], &mut status, WUNTRACED);
+
+                if status != 0 {
+                    break;
+                }
+            }
+        }
+
+        shell.background.remove(ind - 1);
+
+        (-1, true)
     }
 }
 

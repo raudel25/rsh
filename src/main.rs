@@ -3,7 +3,7 @@ use std::io::{self, Write};
 extern crate libc;
 use libc::{c_int, kill, signal, SIGINT, SIGKILL};
 
-use rsh::{Shell, CURRENT_COMMAND, SIGNAL_CTRL_C};
+use rsh::{Shell, Signal, CURRENT_COMMAND, SIGNAL_CTRL_C};
 
 extern "C" fn ctrl_c(_: c_int) {
     unsafe {
@@ -11,10 +11,21 @@ extern "C" fn ctrl_c(_: c_int) {
             return;
         }
 
-        kill(
-            CURRENT_COMMAND,
-            if SIGNAL_CTRL_C { SIGINT } else { SIGKILL },
-        );
+        SIGNAL_CTRL_C = match SIGNAL_CTRL_C {
+            Signal::Default => Signal::SigInt,
+            Signal::SigInt => Signal::SigKill,
+            Signal::SigKill => Signal::SigKill,
+        };
+
+        match SIGNAL_CTRL_C {
+            Signal::SigInt => {
+                kill(CURRENT_COMMAND, SIGINT);
+            }
+            Signal::SigKill => {
+                kill(CURRENT_COMMAND, SIGKILL);
+            }
+            _ => {}
+        }
     }
 }
 
@@ -30,7 +41,7 @@ fn main() {
 
         unsafe {
             CURRENT_COMMAND = -1;
-            SIGNAL_CTRL_C = true;
+            SIGNAL_CTRL_C = Signal::Default;
         }
         rsh.update_background();
 

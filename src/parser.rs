@@ -48,6 +48,7 @@ pub fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
         "history" => Box::new(HistoryCommand::new()),
         "get" => Box::new(GetSetCommand::new(args, GetSet::Get)),
         "set" => set(args),
+        "unset" => Box::new(GetSetCommand::new(args, GetSet::UnSet)),
         "if" => conditional(args),
         "&" => background(args, ind),
         "jobs" => Box::new(Jobs::new()),

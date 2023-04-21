@@ -12,7 +12,7 @@ use colored::Colorize;
 extern crate libc;
 use libc::{c_int, fork, setpgid, waitpid, WUNTRACED};
 
-use crate::{CURRENT_COMMAND};
+use crate::CURRENT_COMMAND;
 
 use super::{error, Shell};
 
@@ -39,6 +39,7 @@ pub enum Special {
 pub enum GetSet {
     Get,
     Set,
+    UnSet,
 }
 
 pub trait Execute {
@@ -345,6 +346,20 @@ impl Execute for GetSetCommand<'_> {
                 } else {
                     status = false;
                     eprintln!("{} incorrect command get", error());
+                }
+            }
+
+            GetSet::UnSet => {
+                if self.args.len() == 2 {
+                    if shell.variables.contains_key(self.args[1]) {
+                        shell.variables.remove(self.args[1]);
+                    } else {
+                        status = false;
+                        eprintln!("{} variable not found", error());
+                    }
+                } else {
+                    status = false;
+                    eprintln!("{} incorrect command unset", error());
                 }
             }
         }

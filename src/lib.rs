@@ -1,5 +1,6 @@
 use format_line::{decode_command, format_line};
 use parser::parser;
+use rustyline::config::Configurer;
 use std::collections::HashMap;
 
 extern crate colored;
@@ -7,12 +8,11 @@ use colored::*;
 
 extern crate rustyline;
 use rustyline::completion::{Completer, FilenameCompleter, Pair};
-use rustyline::history::{FileHistory, History, SearchDirection};
-use rustyline::{Editor, Helper,CompletionType, Config, EditMode};
 use rustyline::highlight::Highlighter;
 use rustyline::hint::{Hinter, HistoryHinter};
+use rustyline::history::{FileHistory, History, SearchDirection};
 use rustyline::validate::Validator;
-
+use rustyline::{CompletionType, Config, EditMode, Editor, Helper};
 
 extern crate libc;
 use libc::{c_int, waitpid, WNOHANG};
@@ -53,6 +53,7 @@ impl Shell {
 
         let mut readline = Editor::<MyHelper, FileHistory>::with_config(config).unwrap();
         readline.set_helper(Some(my_helper));
+        readline.set_max_history_size(1000).unwrap();
 
         match readline.load_history(Shell::history_path().as_str()) {
             Ok(_) => {}
@@ -67,11 +68,19 @@ impl Shell {
     }
 
     pub fn execute(&mut self, line: String) {
+        if line == "" {
+            return;
+        }
+        
+        let save = line.chars().next().unwrap() != ' ';
+
         let line = format_line(line);
         let line = self.again_command(line);
 
-        let save = decode_command(line.clone());
-        self.readline.add_history_entry(save.as_str()).unwrap();
+        if save {
+            let line_save = decode_command(line.clone());
+            self.readline.add_history_entry(line_save.as_str()).unwrap();
+        }
 
         let args: Vec<&str> = line.split_whitespace().collect();
 

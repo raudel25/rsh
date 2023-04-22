@@ -6,8 +6,13 @@ extern crate colored;
 use colored::*;
 
 extern crate rustyline;
-use rustyline::history::{History, SearchDirection};
-use rustyline::DefaultEditor;
+use rustyline::completion::{Completer, FilenameCompleter, Pair};
+use rustyline::history::{FileHistory, History, SearchDirection};
+use rustyline::{Editor, Helper,CompletionType, Config, EditMode};
+use rustyline::highlight::Highlighter;
+use rustyline::hint::{Hinter, HistoryHinter};
+use rustyline::validate::Validator;
+
 
 extern crate libc;
 use libc::{c_int, waitpid, WNOHANG};
@@ -34,12 +39,20 @@ fn error() -> ColoredString {
 pub struct Shell {
     variables: HashMap<String, String>,
     background: Vec<i32>,
-    pub readline: DefaultEditor,
+    pub readline: Editor<MyHelper, FileHistory>,
 }
 
 impl Shell {
     pub fn new() -> Shell {
-        let mut readline = DefaultEditor::new().unwrap();
+        let config = Config::builder()
+            .edit_mode(EditMode::Emacs)
+            .completion_type(CompletionType::Circular)
+            .build();
+
+        let my_helper = MyHelper::new();
+
+        let mut readline = Editor::<MyHelper, FileHistory>::with_config(config).unwrap();
+        readline.set_helper(Some(my_helper));
 
         match readline.load_history(Shell::history_path().as_str()) {
             Ok(_) => {}
@@ -183,3 +196,44 @@ impl Shell {
         }
     }
 }
+
+pub struct MyHelper {
+    completer: FilenameCompleter,
+    hinter: HistoryHinter,
+}
+
+impl MyHelper {
+    pub fn new() -> MyHelper {
+        let completer = FilenameCompleter::new();
+        let hinter = HistoryHinter {};
+
+        MyHelper { completer, hinter }
+    }
+}
+
+impl Completer for MyHelper {
+    type Candidate = Pair;
+
+    fn complete(
+        &self, // FIXME should be `&mut self`
+        line: &str,
+        pos: usize,
+        ctx: &rustyline::Context<'_>,
+    ) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {
+        self.completer.complete(line, pos, ctx)
+    }
+}
+
+impl Validator for MyHelper {}
+
+impl Hinter for MyHelper {
+    type Hint = String;
+
+    fn hint(&self, line: &str, pos: usize, ctx: &rustyline::Context<'_>) -> Option<Self::Hint> {
+        self.hinter.hint(line, pos, ctx)
+    }
+}
+
+impl Highlighter for MyHelper {}
+
+impl Helper for MyHelper {}

@@ -1,4 +1,4 @@
-El comando history muestra los últimos 100 comandos ejecutados en el shell, enumerados desde 1 para el más antiguo hasta 100
+El comando history muestra los últimos 1000 comandos ejecutados en el shell, enumerados desde 1 para el más antiguo hasta 1000
 para el último comando.\
 \
 Ejemplo:\

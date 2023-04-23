@@ -1,5 +1,5 @@
 El comando again <number> ejecuta un comando almacenado en el historial <number> viene dado por el orden en que se
-ejecutaron los comandos desde 1 para el más viejo hasta 100 para el último, si <number> no se especifica se ejecuta 
+ejecutaron los comandos desde 1 para el más viejo hasta 1000 para el último, si <number> no se especifica se ejecuta 
 el ultimo comando. Una vez que se ejecuta el comando especificado anteriormente este pasa al historial.\
 \
 Ejemplo:\

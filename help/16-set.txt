@@ -1,7 +1,6 @@
-El comando set <c> <value> permite introducir una nueva variable al sistema o modificar el valor de una ya existente.
-Las variables introducidas deben ser letras minúsculas del alfabeto inglés. Si <value> es está entre comillas `command` se
-ejecuta command y la salida de de ese comando se almacena como valor de <c>, si la salida del comando es vacía la ejecución
-de set no tiene éxito y por tanto no se guarda la variable.\
+El comando set <var> <value> permite introducir una nueva variable al sistema o modificar el valor de una ya existente.
+Si <value> es está entre comillas `command` se ejecuta command y la salida de de ese comando se almacena como valor de <var>, 
+si la salida del comando es vacía la ejecución de set no tiene éxito y por tanto no se guarda la variable.\
 \
 Ejemplo:\
 \

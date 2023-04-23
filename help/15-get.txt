@@ -1,5 +1,5 @@
-El comando get <c> muestra el valor de la variable <c> en el sistema. Si la variable no existe el comando no tendrá éxito.
-Si <c> no se especifica el comando lista todas las variables.\
+El comando get <var> muestra el valor de la variable <var> en el sistema. Si la variable no existe el comando no tendrá éxito.
+Si <var> no se especifica el comando lista todas las variables.\
 \
 Ejemplo:\
 \

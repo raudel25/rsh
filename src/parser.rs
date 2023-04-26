@@ -64,9 +64,9 @@ pub fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
 fn priority_command(arg: &str) -> u16 {
     match arg {
         "<" => 2,
-        "|" => 3,
-        ">" => 4,
-        ">>" => 4,
+        ">" => 3,
+        ">>" => 3,
+        "|" => 4,
         "&&" => 5,
         "||" => 5,
         ";" => 6,

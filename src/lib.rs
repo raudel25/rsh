@@ -1,4 +1,4 @@
-use format_line::{decode_command, format_line};
+use format_line::format_line;
 use parser::parser;
 use rustyline::config::Configurer;
 use std::collections::HashMap;
@@ -71,16 +71,20 @@ impl Shell {
         if line == "" {
             return;
         }
-        
+
         let save = line.chars().next().unwrap() != ' ';
 
-        let line = format_line(line);
         let line = self.again_command(line);
-
         if save {
-            let line_save = decode_command(line.clone());
-            self.readline.add_history_entry(line_save.as_str()).unwrap();
+            self.readline.add_history_entry(line.as_str()).unwrap();
         }
+
+        let line = format_line(line);
+
+        // if save {
+        //     let line_save = decode_command(line.clone());
+        //     self.readline.add_history_entry(line_save.as_str()).unwrap();
+        // }
 
         let args: Vec<&str> = line.split_whitespace().collect();
 
@@ -127,65 +131,102 @@ impl Shell {
         path
     }
 
+    fn special_char(c: char) -> bool {
+        return c == '|' || c == ';' || c == '&' || c == '#' || c == '`';
+    }
+
     fn again_command(&self, line: String) -> String {
         let mut new_line = String::new();
-        let args = line.split_whitespace();
+        let line: Vec<char> = line.chars().collect();
+        let history = self.readline.history();
 
-        let mut b = false;
+        let pat = ['a', 'g', 'a', 'i', 'n'];
+        let mut next = 0;
 
-        for i in args {
-            if b {
-                let number = i.parse::<usize>();
+        for i in 0..line.len() {
+            if next != 0 {
+                next -= 1;
+                continue;
+            }
+            let mut equal = true;
+            if line.len() - i >= pat.len() {
+                for j in 0..pat.len() {
+                    if line[i + j] != pat[j] {
+                        equal = false
+                    };
+                }
+            } else {
+                equal = false;
+            }
 
-                match number {
-                    Ok(number) => {
-                        if number > 0 && number <= self.readline.history().len() {
-                            let command = self
-                                .readline
-                                .history()
-                                .get(number - 1, SearchDirection::Forward)
+            if equal {
+                if i + pat.len() == line.len() || Shell::special_char(line[i + pat.len()]) {
+                    let command = history
+                        .get(history.len() - 1, SearchDirection::Forward)
+                        .unwrap()
+                        .unwrap();
+                    new_line.push_str(&command.entry);
+
+                    next = pat.len() - 1;
+                    continue;
+                }
+                let mut s1 = i + pat.len();
+                while line[s1] == ' ' {
+                    s1 += 1;
+                    if s1 == line.len() {
+                        break;
+                    }
+                }
+
+                if s1 == line.len() {
+                    let command = history
+                        .get(history.len(), SearchDirection::Forward)
+                        .unwrap()
+                        .unwrap();
+                    new_line.push_str(&command.entry);
+
+                    break;
+                }
+
+                let mut s2 = s1;
+                while line[s2] != ' ' && !Shell::special_char(line[s2]) {
+                    s2 += 1;
+                    if s2 == line.len() {
+                        break;
+                    }
+                }
+
+                let num = String::from_iter(line[s1..s2].iter());
+
+                let q = num.as_str().parse::<usize>();
+
+                match q {
+                    Ok(q) => {
+                        if q <= history.len() {
+                            let command = history
+                                .get(q - 1, SearchDirection::Forward)
                                 .unwrap()
                                 .unwrap();
                             new_line.push_str(&command.entry);
                         } else {
-                            eprintln!("{}: incorrect command again", error());
+                            eprintln!("{} incorrect command again", error());
                             new_line.push_str("false");
                         }
 
-                        new_line.push(' ');
-                        b = false;
-                        continue;
+                        next = s2 - i - 1;
                     }
                     Err(_) => {
-                        let command = self
-                            .readline
-                            .history()
-                            .get(self.readline.history().len() - 1, SearchDirection::Forward)
+                        let command = history
+                            .get(history.len() - 1, SearchDirection::Forward)
                             .unwrap()
                             .unwrap();
                         new_line.push_str(&command.entry);
-                        new_line.push(' ');
+                        next = pat.len() - 1;
                     }
                 }
+            } else {
+                new_line.push(line[i]);
             }
-
-            b = i == "again";
-
-            if !b {
-                new_line.push_str(i);
-                new_line.push(' ');
-            }
-        }
-
-        if b {
-            let command = self
-                .readline
-                .history()
-                .get(self.readline.history().len() - 1, SearchDirection::Forward)
-                .unwrap()
-                .unwrap();
-            new_line.push_str(&command.entry);
-            new_line.push(' ');
         }
 
         new_line.trim().to_string()

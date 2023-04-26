@@ -40,32 +40,6 @@ fn encode_command(line: String) -> String {
     return new_line;
 }
 
-pub fn decode_command(line: String) -> String {
-    let mut new_line1 = String::new();
-
-    let args: Vec<&str> = line.split("( ").collect();
-
-    for i in 0..args.len() - 1 {
-        new_line1.push_str(args[i]);
-        new_line1.push('`');
-    }
-
-    new_line1.push_str(args[args.len() - 1]);
-
-    let mut new_line2 = String::new();
-
-    let args: Vec<&str> = new_line1.split(" )").collect();
-
-    for i in 0..args.len() - 1 {
-        new_line2.push_str(args[i]);
-        new_line2.push('`');
-    }
-
-    new_line2.push_str(args[args.len() - 1]);
-
-    new_line2
-}
-
 fn format_pat(line: &String, pat: &str, par: bool) -> String {
     let mut new_line = String::new();
 

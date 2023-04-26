@@ -30,7 +30,7 @@ pub fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
 
         let aux = priority_command(args[i]);
 
-        if aux > priority {
+        if aux >= priority {
             priority = aux;
             ind = i;
         }

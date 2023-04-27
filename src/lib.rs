@@ -228,14 +228,21 @@ impl Shell {
     }
 
     pub fn update_background(&mut self) {
-        for i in 0..self.background.len() {
-            unsafe {
-                let mut status: c_int = 0;
-                waitpid(self.background[i], &mut status as *mut c_int, WNOHANG);
+        let mut s = true;
 
-                if status != 0 {
-                    println!("[{}]\tDone\t{}", i + 1, self.background[i]);
-                    self.background.remove(i);
+        while s {
+            s = false;
+            for i in 0..self.background.len() {
+                unsafe {
+                    let mut status: c_int = 0;
+                    waitpid(self.background[i], &mut status as *mut c_int, WNOHANG);
+
+                    if status != 0 {
+                        println!("[{}]\tDone\t{}", i + 1, self.background[i]);
+                        self.background.remove(i);
+                        s = true;
+                        break;
+                    }
                 }
             }
         }

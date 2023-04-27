@@ -130,12 +130,42 @@ impl Shell {
         return c == '|' || c == ';' || c == '&' || c == '#' || c == '`';
     }
 
+    fn get_again(&self, line: &mut String, index: usize) {
+        if index > 0 && index <= self.readline.history().len() {
+            let command = self
+                .readline
+                .history()
+                .get(index - 1, SearchDirection::Forward)
+                .unwrap()
+                .unwrap();
+            line.push_str(&command.entry);
+        } else {
+            eprintln!("{} incorrect command again", error());
+            line.push_str("false");
+        }
+    }
+
+    fn equal_pat(line: &[char], pat: &[char], pos: usize) -> bool {
+        if line.len() - pos < pat.len() {
+            return false;
+        }
+
+        let mut equal = true;
+        for j in 0..pat.len() {
+            if line[pos + j] != pat[j] {
+                equal = false
+            };
+        }
+
+        equal
+    }
+
     fn again_command(&self, line: String) -> String {
         let mut new_line = String::new();
         let line: Vec<char> = line.chars().collect();
-        let history = self.readline.history();
 
         let pat = ['a', 'g', 'a', 'i', 'n'];
+        let pat_help = ['h', 'e', 'l', 'p'];
         let mut next = 0;
 
         for i in 0..line.len() {
@@ -143,25 +173,29 @@ impl Shell {
                 next -= 1;
                 continue;
             }
-            let mut equal = true;
-            if line.len() - i >= pat.len() {
-                for j in 0..pat.len() {
-                    if line[i + j] != pat[j] {
-                        equal = false
-                    };
+            let equal = Shell::equal_pat(&line, &pat, i);
+
+            if equal && i > 0 {
+                let mut w = i - 1;
+
+                while w >= pat_help.len() - 1 {
+                    w -= 1;
+                    if line[w] != ' ' {
+                        break;
+                    }
                 }
-            } else {
-                equal = false;
+
+                let help = w + 1 >= pat_help.len()
+                    && Shell::equal_pat(&line, &pat_help, w +1- pat_help.len());
+                if help {
+                    new_line.push(line[i]);
+                    continue;
+                }
             }
 
             if equal {
                 if i + pat.len() == line.len() || Shell::special_char(line[i + pat.len()]) {
-                    let command = history
-                        .get(history.len() - 1, SearchDirection::Forward)
-                        .unwrap()
-                        .unwrap();
-                    new_line.push_str(&command.entry);
-
+                    self.get_again(&mut new_line, self.readline.history().len());
                     next = pat.len() - 1;
                     continue;
                 }
@@ -174,12 +208,7 @@ impl Shell {
                 }
 
                 if s1 == line.len() {
-                    let command = history
-                        .get(history.len(), SearchDirection::Forward)
-                        .unwrap()
-                        .unwrap();
-                    new_line.push_str(&command.entry);
-
+                    self.get_again(&mut new_line, self.readline.history().len());
                     break;
                 }
 
@@ -192,30 +221,15 @@ impl Shell {
                 }
 
                 let num = String::from_iter(line[s1..s2].iter());
-
                 let q = num.as_str().parse::<usize>();
 
                 match q {
                     Ok(q) => {
-                        if q <= history.len() {
-                            let command = history
-                                .get(q - 1, SearchDirection::Forward)
-                                .unwrap()
-                                .unwrap();
-                            new_line.push_str(&command.entry);
-                        } else {
-                            eprintln!("{} incorrect command again", error());
-                            new_line.push_str("false");
-                        }
-
+                        self.get_again(&mut new_line, q);
                         next = s2 - i - 1;
                     }
                     Err(_) => {
-                        let command = history
-                            .get(history.len() - 1, SearchDirection::Forward)
-                            .unwrap()
-                            .unwrap();
-                        new_line.push_str(&command.entry);
+                        self.get_again(&mut new_line, self.readline.history().len());
                         next = pat.len() - 1;
                     }
                 }

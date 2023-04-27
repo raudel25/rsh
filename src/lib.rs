@@ -81,11 +81,6 @@ impl Shell {
 
         let line = format_line(line);
 
-        // if save {
-        //     let line_save = decode_command(line.clone());
-        //     self.readline.add_history_entry(line_save.as_str()).unwrap();
-        // }
-
         let args: Vec<&str> = line.split_whitespace().collect();
 
         parser(&args).execute(self, -1, true);
@@ -265,7 +260,7 @@ impl Completer for MyHelper {
     type Candidate = Pair;
 
     fn complete(
-        &self, // FIXME should be `&mut self`
+        &self,
         line: &str,
         pos: usize,
         ctx: &rustyline::Context<'_>,

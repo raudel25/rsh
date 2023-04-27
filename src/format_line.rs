@@ -1,5 +1,11 @@
 pub fn format_line(line: String) -> String {
-    let pat = [("&", true), ("|", true), (";", false)];
+    let pat = [
+        ("&", true),
+        ("|", true),
+        (";", false),
+        ("<", false),
+        (">", true),
+    ];
 
     let mut new_line = stop_line(line);
 

@@ -36,6 +36,18 @@ pub fn parser<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
         }
     }
 
+    if ind == 0 && priority == 1 && args[0] == "(" {
+        let (args, possible) = eliminate_parent(args);
+
+        if possible {
+            return parser(args);
+        } else {
+            eprintln!("{} incorrect format line", error());
+
+            return Box::new(SpecialCommand::new(Special::False));
+        }
+    }
+
     match args[ind] {
         "<" => redirect(args, ind, Redirect::In),
         "|" => pipes(args, ind),
@@ -73,6 +85,22 @@ fn priority_command(arg: &str) -> u16 {
         ";" => 7,
         _ => 0,
     }
+}
+
+fn eliminate_parent<'a>(args: &'a [&str]) -> (&'a [&'a str], bool) {
+    let mut i = 0;
+    let mut j = args.len() - 1;
+
+    while args[i] == "(" && args[j] == ")" {
+        i += 1;
+        j -= 1;
+
+        if i > j {
+            return (args, false);
+        }
+    }
+
+    (&args[i..j + 1], true)
 }
 
 fn chain<'a>(args: &'a [&str], ind: usize, chain: Chain) -> Box<dyn Execute + 'a> {

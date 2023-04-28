@@ -15,8 +15,8 @@ use rustyline::history::{FileHistory, History, SearchDirection};
 use rustyline::validate::Validator;
 use rustyline::{CompletionType, Config, EditMode, Editor, Helper};
 
-use nix::{sys::wait::waitpid, unistd::Pid};
 use nix::sys::wait::WaitStatus;
+use nix::{sys::wait::waitpid, unistd::Pid};
 
 mod commands;
 mod format_line;

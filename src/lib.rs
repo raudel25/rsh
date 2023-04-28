@@ -1,4 +1,5 @@
 use format_line::format_line;
+use nix::sys::wait::WaitPidFlag;
 use parser::parser;
 use rustyline::config::Configurer;
 use std::collections::HashMap;
@@ -14,8 +15,8 @@ use rustyline::history::{FileHistory, History, SearchDirection};
 use rustyline::validate::Validator;
 use rustyline::{CompletionType, Config, EditMode, Editor, Helper};
 
-extern crate libc;
-use libc::{c_int, waitpid, WNOHANG};
+use nix::{sys::wait::waitpid, unistd::Pid};
+use nix::sys::wait::WaitStatus;
 
 mod commands;
 mod format_line;
@@ -38,7 +39,7 @@ fn error() -> ColoredString {
 }
 pub struct Shell {
     variables: HashMap<String, String>,
-    background: Vec<i32>,
+    background: Vec<Pid>,
     pub readline: Editor<MyHelper, FileHistory>,
 }
 
@@ -186,7 +187,7 @@ impl Shell {
                 }
 
                 let help = w + 1 >= pat_help.len()
-                    && Shell::equal_pat(&line, &pat_help, w +1- pat_help.len());
+                    && Shell::equal_pat(&line, &pat_help, w + 1 - pat_help.len());
                 if help {
                     new_line.push(line[i]);
                     continue;
@@ -247,16 +248,16 @@ impl Shell {
         while s {
             s = false;
             for i in 0..self.background.len() {
-                unsafe {
-                    let mut status: c_int = 0;
-                    waitpid(self.background[i], &mut status as *mut c_int, WNOHANG);
+                let wait_status = waitpid(self.background[i], Some(WaitPidFlag::WNOHANG)).unwrap();
 
-                    if status != 0 {
+                match wait_status {
+                    WaitStatus::Exited(_, _) => {
                         println!("[{}]\tDone\t{}", i + 1, self.background[i]);
                         self.background.remove(i);
                         s = true;
                         break;
                     }
+                    _ => {}
                 }
             }
         }

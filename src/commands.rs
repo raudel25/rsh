@@ -9,8 +9,11 @@ use std::process::{Command, Stdio};
 extern crate colored;
 use colored::Colorize;
 
-extern crate libc;
-use libc::{c_int, fork, setpgid, waitpid, WUNTRACED};
+use nix::sys::wait::{WaitPidFlag, WaitStatus};
+use nix::{
+    sys::wait::waitpid,
+    unistd::{fork, ForkResult},
+};
 
 use super::help::{COMMANDS, COMMANDS_HELP};
 use super::{error, Shell};
@@ -486,23 +489,16 @@ impl Background<'_> {
 
 impl Execute for Background<'_> {
     fn execute(&self, shell: &mut Shell, _: i32, _: bool) -> (i32, bool) {
-        unsafe {
-            match fork() {
-                0 => {
-                    setpgid(0, 0);
-
-                    self.command.execute(shell, -1, true);
-
-                    exit(1);
-                }
-
-                pid => {
-                    setpgid(pid, pid);
-
-                    println!("[{}]\t{}", shell.background.len() + 1, pid);
-                    shell.background.push(pid);
-                }
+        match unsafe { fork() } {
+            Ok(ForkResult::Parent { child, .. }) => {
+                shell.background.push(child);
+                println!("[{}]\t{}", shell.background.len(), child);
             }
+            Ok(ForkResult::Child) => {
+                self.command.execute(shell, -1, true);
+                unsafe { libc::_exit(0) };
+            }
+            Err(_) => println!("Fork failed"),
         }
 
         (-1, true)
@@ -581,16 +577,21 @@ impl Execute for Foreground<'_> {
         };
 
         unsafe {
-            CURRENT_COMMAND = shell.background[ind - 1];
+            CURRENT_COMMAND = shell.background[ind - 1].as_raw();
+        }
 
-            loop {
-                let mut status: c_int = 0;
+        loop {
+            let wait_status =
+                waitpid(shell.background[ind - 1], Some(WaitPidFlag::WUNTRACED)).unwrap();
 
-                waitpid(shell.background[ind - 1], &mut status, WUNTRACED);
-
-                if status != 0 {
+            match wait_status {
+                WaitStatus::Exited(_, _) => {
                     break;
                 }
+                WaitStatus::Signaled(_, _, _) => {
+                    break;
+                }
+                _ => {}
             }
         }
 

@@ -1,1 +1,3 @@
 El comando exit finaliza la ejecución del shell.\
+\
+Prioridad: 0\

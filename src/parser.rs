@@ -100,6 +100,10 @@ fn eliminate_parent<'a>(args: &'a [&str]) -> (&'a [&'a str], bool) {
         }
     }
 
+    if args[i] == "(" && args[j] == ")" {
+        return (args, false);
+    }
+
     (&args[i..j + 1], true)
 }
 

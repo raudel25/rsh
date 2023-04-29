@@ -18,7 +18,7 @@ def parser(s: str) -> str:
                 resp += ' '
             continue
 
-        resp += i
+        resp += i if i != '\"' else '\\\"'
 
     return resp
 

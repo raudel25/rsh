@@ -1,6 +1,8 @@
 El operador & al final de un comando ejecuta dicho comando el background esto significa que dicho comando se ejecuta 
 sin afectar el ciclo del shell.\
 \
+Prioridad: 5\
+\
 Ejemplo:\
 \
 rsh $ cp movie.mkv .. & # el comando se envía al background\

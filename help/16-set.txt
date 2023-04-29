@@ -2,6 +2,8 @@ El comando set <var> <value> permite introducir una nueva variable al sistema o 
 Si <value> es está entre comillas `command` se ejecuta command y la salida de de ese comando se almacena como valor de <var>, 
 si la salida del comando es vacía la ejecución de set no tiene éxito y por tanto no se guarda la variable.\
 \
+Prioridad: 0\
+\
 Ejemplo:\
 \
 rsh $ set a hola # como a no existe se crea en el sistema con valor hola\

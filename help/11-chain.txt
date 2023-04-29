@@ -1,8 +1,14 @@
 En este apartado tenemos los comandos ( ; , || , && ).\
 \
+Prioridad: 6\
+\
 El operador ; permite ejecutar varios comandos en la misma línea.\
 \
+Prioridad: 4\
+\
 El comando command1 && command2 ejecuta command1 y si este tiene éxito ejecuta command2\
+\
+Prioridad: 4\
 \
 El comando command1 || command2 ejecuta command1 y si este no tiene éxito ejecuta command2 en caso contrario no se ejecuta
 más nada.\

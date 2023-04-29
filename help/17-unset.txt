@@ -1,6 +1,8 @@
 El comando unset <var> elimina la variable <var> del sistema con su respectivo valor. Si <var> no existe el comando no tiene
 éxito.\
 \
+Prioridad: 0\
+\
 Ejemplo:\
 \
 rsh $ set c hola\

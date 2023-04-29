@@ -1,13 +1,21 @@
 En este apartado encontramos 4 comandos ( | , < , > , >> ) que nos permitirán redirigir la entrada y la salida de los
 comandos que ejecutemos.\
 \
+Prioridad: 3\
+\
 El comando command1 | command2 ejecuta <command1>, redirecciona la salida de <command1> a la entrada de <command2> y luego
 ejecuta <command2>.\
 \
+Prioridad: 1\
+\
 El comando command < file redirecciona el contenido del archivo <file> a la entrada de <command> y ejecuta <command>.\
+\
+Prioridad: 2\
 \
 El comando command > file ejecuta <command> redirecciona la salida de <command> hacia el archivo <file>, sobrescribiendo\
 el contenido de <file>.\
+\
+Prioridad: 2\
 \
 El comando command >> file hace lo mismo que el comando anterior pero escribe al final de <file> sin sobrescribir el\
 contenido de dicho archivo.\

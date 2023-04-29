@@ -2,6 +2,8 @@ El comando again <number> ejecuta un comando almacenado en el historial <number>
 ejecutaron los comandos desde 1 para el más viejo hasta 1000 para el último, si <number> no se especifica se ejecuta 
 el último comando. Una vez que se ejecuta el comando especificado anteriormente este pasa al historial.\
 \
+Prioridad: 0\
+\
 Ejemplo:\
 \
 rsh $ history\

@@ -1,6 +1,8 @@
 El comando get <var> muestra el valor de la variable <var> en el sistema. Si la variable no existe el comando no tendrá éxito.
 Si <var> no se especifica el comando lista todas las variables.\
 \
+Prioridad: 0\
+\
 Ejemplo:\
 \
 rsh $ set a hola\

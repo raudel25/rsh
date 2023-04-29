@@ -1,5 +1,7 @@
 El comando jobs lista todos los procesos que están ocurriendo en el background.\
 \
+Prioridad: 0\
+\
 Ejemplo:\
 \
 rsh $ cp movie.mkv .. &\

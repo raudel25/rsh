@@ -9,6 +9,10 @@ se ejecutará en caso contrario no pasa nada.\
 Adicionalmente contamos con otros 2 comandos especiales (true, false) que simulan una condición que siempre se cumple y otra
 que nunca se cumple respectivamente. Adicionalmente se puede anidar una operación condicional dentro de otra.\
 \
+Prioridad: 0\
+\
+Nota: lo que se encuntra entre el if y el end se interpreta como un solo comando\
+\
 Ejemplo:\
 \
 rsh $ if cond then execute end\

@@ -12,7 +12,7 @@ use colored::Colorize;
 use nix::sys::wait::{WaitPidFlag, WaitStatus};
 use nix::{
     sys::wait::waitpid,
-    unistd::{fork, ForkResult},
+    unistd::{fork, getpid, setpgid, ForkResult},
 };
 
 use super::help::{COMMANDS, COMMANDS_HELP};
@@ -491,10 +491,12 @@ impl Execute for Background<'_> {
     fn execute(&self, shell: &mut Shell, _: i32, _: bool) -> (i32, bool) {
         match unsafe { fork() } {
             Ok(ForkResult::Parent { child, .. }) => {
+                setpgid(child, child).unwrap();
                 shell.background.push(child);
                 println!("[{}]\t{}", shell.background.len(), child);
             }
             Ok(ForkResult::Child) => {
+                setpgid(getpid(), getpid()).unwrap();
                 self.command.execute(shell, -1, true);
                 unsafe { libc::_exit(0) };
             }

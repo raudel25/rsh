@@ -1,7 +1,6 @@
 use format_line::format_line;
 use nix::sys::wait::WaitPidFlag;
 use parser::parser;
-use rustyline::config::Configurer;
 use std::collections::HashMap;
 
 extern crate colored;
@@ -13,6 +12,7 @@ use rustyline::highlight::Highlighter;
 use rustyline::hint::{Hinter, HistoryHinter};
 use rustyline::history::{FileHistory, History, SearchDirection};
 use rustyline::validate::Validator;
+use rustyline::config::Configurer;
 use rustyline::{CompletionType, Config, EditMode, Editor, Helper};
 
 use nix::sys::wait::WaitStatus;
@@ -80,9 +80,8 @@ impl Shell {
             self.readline.add_history_entry(line.as_str()).unwrap();
         }
 
-        let line = format_line(line);
-
-        let args: Vec<&str> = line.split_whitespace().collect();
+        let args = format_line(line);
+        let args: Vec<&str> = args.iter().map(|s| s.as_str()).collect();        
 
         parser(&args).execute(self, -1, true);
     }

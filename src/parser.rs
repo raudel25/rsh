@@ -151,8 +151,13 @@ fn redirect<'a>(args: &'a [&str], ind: usize, redirect_command: Redirect) -> Box
 }
 
 fn set<'a>(args: &'a [&str]) -> Box<dyn Execute + 'a> {
-    if args.len() > 3 {
-        if args[2] == "(" && args[args.len() - 1] == ")" {
+    if args.len() < 3 {
+        eprintln!("{} incorrect command set", error());
+        return Box::new(SpecialCommand::new(Special::False));
+    }
+
+    if args[2] == "(" {
+        if args[args.len() - 1] == ")" {
             let c = parser(&args[3..args.len() - 1]);
 
             return Box::new(ComplexSet::new(args[1], c));

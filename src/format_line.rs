@@ -1,6 +1,6 @@
 use crate::error;
 
-pub fn format_line(line: String) -> String {
+pub fn format_line(line: String) -> Vec<String> {
     let pat = [
         ("&", true),
         ("|", true),
@@ -18,11 +18,12 @@ pub fn format_line(line: String) -> String {
         new_line = format_pat(&new_line, i.0, i.1);
     }
 
-    new_line = decode_c(new_line, v);
     new_line = encode_command(new_line);
     new_line = eliminate_spaces(new_line);
 
-    return new_line;
+    let args: Vec<&str> = new_line.split_whitespace().collect();
+
+    decode_c(args, v)
 }
 
 fn stop_line(line: String) -> String {
@@ -94,18 +95,26 @@ fn encode_c(line: String) -> (String, Vec<String>) {
     (new_line, v)
 }
 
-fn decode_c(line: String, v: Vec<String>) -> String {
-    let mut new_line = String::new();
+fn decode_c(args: Vec<&str>, v: Vec<String>) -> Vec<String> {
+    let mut new_args: Vec<String> = Vec::new();
 
-    let args: Vec<&str> = line.split("\"").collect();
+    let mut j = 0;
+    for arg in args {
+        let mut aux = String::new();
 
-    for i in 0..args.len() - 1 {
-        new_line.push_str(format!("{}{}", args[i], v[i]).as_str());
+        for i in arg.chars() {
+            if i == '"' {
+                aux.push_str(v[j].as_str());
+                j += 1;
+            } else {
+                aux.push(i);
+            }
+        }
+
+        new_args.push(aux);
     }
 
-    new_line.push_str(args[args.len() - 1]);
-
-    new_line
+    new_args
 }
 
 fn format_pat(line: &String, pat: &str, par: bool) -> String {

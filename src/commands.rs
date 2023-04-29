@@ -1,6 +1,6 @@
 use std::env;
 use std::fs::{File, OpenOptions};
-use std::io::{copy, Read};
+use std::io::{copy, stdin, Read};
 use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
 use std::path::Path;
 use std::process::exit;
@@ -10,9 +10,10 @@ extern crate colored;
 use colored::Colorize;
 
 use nix::sys::wait::{WaitPidFlag, WaitStatus};
+use nix::unistd::tcsetpgrp;
 use nix::{
     sys::wait::waitpid,
-    unistd::{fork, getpid, setpgid, ForkResult},
+    unistd::{fork, setpgid, ForkResult, Pid},
 };
 
 use super::help::{COMMANDS, COMMANDS_HELP};
@@ -322,14 +323,13 @@ impl Execute for GetSetCommand<'_> {
 
         match self.get_set {
             GetSet::Set => {
-                if self.args.len() == 3 {
-                    let _ = &shell
-                        .variables
-                        .insert(self.args[1].to_string(), self.args[2].to_string());
-                } else {
-                    status = false;
-                    eprintln!("{} incorrect command set", error());
+                let mut value = String::new();
+
+                for i in 2..self.args.len() - 1 {
+                    value.push_str(format!("{} ", self.args[i]).as_str());
                 }
+                value.push_str(self.args[self.args.len() - 1]);
+                let _ = &shell.variables.insert(self.args[1].to_string(), value);
             }
             GetSet::Get => {
                 if self.args.len() == 1 {
@@ -496,9 +496,14 @@ impl Execute for Background<'_> {
                 println!("[{}]\t{}", shell.background.len(), child);
             }
             Ok(ForkResult::Child) => {
-                setpgid(getpid(), getpid()).unwrap();
-                self.command.execute(shell, -1, true);
-                unsafe { libc::_exit(0) };
+                setpgid(Pid::this(), Pid::this()).unwrap();
+                let (_, status) = self.command.execute(shell, -1, true);
+
+                if status {
+                    unsafe { libc::exit(libc::EXIT_SUCCESS) }
+                } else {
+                    unsafe { libc::exit(libc::EXIT_FAILURE) }
+                }
             }
             Err(_) => println!("Fork failed"),
         }
@@ -581,6 +586,9 @@ impl Execute for Foreground<'_> {
         unsafe {
             CURRENT_COMMAND = shell.background[ind - 1].as_raw();
         }
+
+        tcsetpgrp(stdin().as_raw_fd(), shell.background[ind - 1]).unwrap();
+        setpgid(Pid::this(), shell.background[ind - 1]).unwrap();
 
         loop {
             let wait_status =

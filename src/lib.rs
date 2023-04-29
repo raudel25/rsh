@@ -168,13 +168,20 @@ impl Shell {
         let pat = ['a', 'g', 'a', 'i', 'n'];
         let pat_help = ['h', 'e', 'l', 'p'];
         let mut next = 0;
+        let mut c = false;
 
         for i in 0..line.len() {
+            if '"' == line[i] {
+                c = !c;
+            }
+
             if next != 0 {
                 next -= 1;
                 continue;
             }
+
             let equal = Shell::equal_pat(&line, &pat, i);
+            let equal = equal && !c;
 
             if equal && i > 0 {
                 let mut w = i - 1;

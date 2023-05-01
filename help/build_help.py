@@ -7,6 +7,11 @@ def parser(s: str) -> str:
 
     for i in s:
         if i == '\\':
+            if act:
+                resp += '\\\\'
+                act = False
+                continue
+
             act = True
             continue
 

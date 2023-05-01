@@ -1,13 +1,15 @@
-El shell cuenta con algunas funcionalidades adicionales, como los paréntesis y las comillas que permiten una mayor
-interoperabilidad. Tomando en el caso de los paréntesis lo que está contenido en estos como un solo comando modificando
-la prioridad de los comandos y en el caso de las comillas se toma lo que está dentro de estas como un solo argumento.
-Además de la api proporcionada por la biblioteca readline que permite interactuar con el historial de comandos y el
-autocompletado para el sistema de archivos.\
+El shell cuenta con algunas funcionalidades adicionales, como los paréntesis, las comillas y la posiblidad de introducir
+caracteres especiales como ( " , \\ , # , ` ) mediante el operador \\, que permiten una mayor interoperabilidad. Tomando
+en el caso de los paréntesis lo que está contenido en estos como un solo comando modificando la prioridad de los comandos,
+en el caso de las comillas se toma lo que está dentro de estas como un solo argumento y en el caso del operador \\ el caracter
+que viene después de este como el que verdaderamente representa. Además de la api proporcionada por la biblioteca readline
+que permite interactuar con el historial de comandos y el autocompletado para el sistema de archivos.\
 \
 Ejemplo:\
 \
 rsh $ (command1 && command2) > a.txt  # la salida de <command1> y <command2> se redirige al archivo de texto\
-rsh & echo \"again\"                    # este comando imprime en pantalla again\
+rsh $ echo "again"                    # este comando imprime en pantalla again\
+rsh $ cd Mis\\ proyectos/my-shell/     # se mueve hacia el directorio Mis proyectos/my-shell/\
 \
 Implementación:\
 \
